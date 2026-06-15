@@ -1,0 +1,208 @@
+package com.joon.chalkak.presentation.home
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.joon.chalkak.model.NearbyCamera
+import com.joon.chalkak.model.RecentRecord
+import com.joon.chalkak.presentation.common.AccentBlue
+import com.joon.chalkak.presentation.common.CameraIcon
+import com.joon.chalkak.presentation.common.CheckCircleIcon
+import com.joon.chalkak.presentation.common.PlayIcon
+import com.joon.chalkak.presentation.common.StatusPill
+import com.joon.chalkak.presentation.common.SurfaceDark
+import com.joon.chalkak.presentation.common.TextMuted
+import com.joon.chalkak.presentation.common.TextPrimary
+import com.joon.chalkak.presentation.common.TextSecondary
+import com.joon.chalkak.presentation.common.WarningAmber
+import com.joon.chalkak.presentation.main.MainUiState
+
+@Composable
+fun HomeScreen(uiState: MainUiState) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 32.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "찍혔나?",
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold
+            )
+            StatusPill(status = uiState.drivingStatus)
+        }
+
+        Spacer(modifier = Modifier.height(66.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "현재 속도",
+                color = TextMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = uiState.currentSpeedKmh.toString(),
+                    color = TextPrimary,
+                    fontSize = 72.sp,
+                    lineHeight = 76.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "km/h",
+                    color = TextSecondary,
+                    fontSize = 20.sp,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(58.dp))
+        CameraCard(camera = uiState.nearbyCamera)
+        Spacer(modifier = Modifier.height(26.dp))
+        PrimaryActionButton()
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = "최근 기록",
+            color = TextSecondary,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+        uiState.recentRecords.forEach { record ->
+            RecentRecordCard(record = record)
+        }
+    }
+}
+
+@Composable
+private fun CameraCard(camera: NearbyCamera) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceDark)
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = CameraIcon,
+            contentDescription = null,
+            tint = WarningAmber,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column {
+            Text(
+                text = "${camera.distanceText} ${camera.title}",
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = camera.subtitle,
+                color = TextMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrimaryActionButton() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(AccentBlue)
+            .clickable { },
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = PlayIcon,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "주행 기록 시작",
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun RecentRecordCard(record: RecentRecord) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceDark)
+            .padding(horizontal = 18.dp, vertical = 17.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = CheckCircleIcon,
+            contentDescription = null,
+            tint = com.joon.chalkak.presentation.common.SafeGreen,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column {
+            Text(
+                text = record.title,
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = record.subtitle,
+                color = TextMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
