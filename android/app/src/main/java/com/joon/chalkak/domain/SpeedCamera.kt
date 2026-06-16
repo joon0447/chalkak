@@ -13,7 +13,10 @@ data class SpeedCamera(
     val sectionLengthMeters: Int?,
     val protectedAreaType: ProtectedAreaType?,
     val referenceDate: String?
-)
+) {
+    val locationCoordinate: GeoLocation
+        get() = GeoLocation(latitude = latitude, longitude = longitude)
+}
 
 enum class EnforcementType {
     SPEED,

@@ -34,9 +34,16 @@ import com.joon.chalkak.presentation.common.TextPrimary
 import com.joon.chalkak.presentation.common.TextSecondary
 import com.joon.chalkak.presentation.common.TrashIcon
 import com.joon.chalkak.presentation.common.WarningAmber
+import com.joon.chalkak.presentation.main.MainUiState
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    uiState: MainUiState,
+    onLocationPermissionClick: () -> Unit,
+    onCameraDataUpdateClick: () -> Unit,
+    onGpsAccuracyClick: () -> Unit,
+    onClearRecordsClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,18 +61,45 @@ fun SettingsScreen() {
 
         SectionLabel("위치 및 데이터")
         SettingsGroup {
-            SettingsRow(PinIcon, "위치 권한", "설정 필요", Color(0xFF123E8C), AccentBlue)
+            SettingsRow(
+                PinIcon,
+                "위치 권한",
+                uiState.locationPermissionSubtitle,
+                Color(0xFF123E8C),
+                AccentBlue,
+                onClick = onLocationPermissionClick
+            )
             SettingsDivider()
-            SettingsRow(CameraIcon, "카메라 데이터", "업데이트 필요", Color(0xFF0D4422), com.joon.chalkak.presentation.common.SafeGreen)
+            SettingsRow(
+                CameraIcon,
+                "카메라 데이터",
+                uiState.cameraDataSubtitle,
+                Color(0xFF0D4422),
+                com.joon.chalkak.presentation.common.SafeGreen,
+                onClick = onCameraDataUpdateClick
+            )
             SettingsDivider()
-            SettingsRow(GpsIcon, "GPS 정확도 설정", "미설정", Color(0xFF4B3605), WarningAmber)
+            SettingsRow(
+                GpsIcon,
+                "GPS 정확도 설정",
+                uiState.gpsAccuracySubtitle,
+                Color(0xFF4B3605),
+                WarningAmber,
+                onClick = onGpsAccuracyClick
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         SectionLabel("기록 보관")
         SettingsGroup {
-            SettingsRow(ArchiveIcon, "기록 보관 기간", "미설정", Color(0xFF252C35), TextSecondary)
+            SettingsRow(
+                ArchiveIcon,
+                "기록 보관 기간",
+                uiState.recordRetentionSubtitle,
+                Color(0xFF252C35),
+                TextSecondary
+            )
             SettingsDivider()
             SettingsRow(
                 icon = TrashIcon,
@@ -73,7 +107,8 @@ fun SettingsScreen() {
                 subtitle = "로컬에 저장된 주행 기록을 모두 삭제합니다",
                 iconBackground = Color(0xFF4A1417),
                 iconColor = Color(0xFFFF4A55),
-                titleColor = Color(0xFFFF4A55)
+                titleColor = Color(0xFFFF4A55),
+                onClick = onClearRecordsClick
             )
         }
 

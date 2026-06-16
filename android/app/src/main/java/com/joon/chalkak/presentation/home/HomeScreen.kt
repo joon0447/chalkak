@@ -41,7 +41,10 @@ import com.joon.chalkak.presentation.common.WarningAmber
 import com.joon.chalkak.presentation.main.MainUiState
 
 @Composable
-fun HomeScreen(uiState: MainUiState) {
+fun HomeScreen(
+    uiState: MainUiState,
+    onDrivingActionClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -98,7 +101,10 @@ fun HomeScreen(uiState: MainUiState) {
             subtitle = "카메라 데이터 업데이트 후 주행을 시작하세요"
         )
         Spacer(modifier = Modifier.height(26.dp))
-        PrimaryActionButton()
+        PrimaryActionButton(
+            isTracking = uiState.isSpeedTracking,
+            onClick = onDrivingActionClick
+        )
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
@@ -181,14 +187,17 @@ private fun EmptyInfoCard(title: String, subtitle: String) {
 }
 
 @Composable
-private fun PrimaryActionButton() {
+private fun PrimaryActionButton(
+    isTracking: Boolean,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(32.dp))
             .background(AccentBlue)
-            .clickable { },
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -200,7 +209,7 @@ private fun PrimaryActionButton() {
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "주행 기록 시작",
+            text = if (isTracking) "주행 기록 종료" else "주행 기록 시작",
             color = Color.White,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold

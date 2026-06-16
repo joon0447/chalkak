@@ -90,12 +90,13 @@ fun SettingsRow(
     subtitle: String,
     iconBackground: Color,
     iconColor: Color,
-    titleColor: Color = TextPrimary
+    titleColor: Color = TextPrimary,
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

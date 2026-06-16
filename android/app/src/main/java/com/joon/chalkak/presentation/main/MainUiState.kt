@@ -10,6 +10,11 @@ data class MainUiState(
     val selectedTab: MainTab = MainTab.HOME,
     val currentSpeedKmh: Int = 0,
     val drivingStatus: DrivingStatus = DrivingStatus.UNKNOWN,
+    val isSpeedTracking: Boolean = false,
+    val locationPermissionSubtitle: String = "설정 필요",
+    val cameraDataSubtitle: String = "업데이트 필요",
+    val gpsAccuracySubtitle: String = "높은 정확도 모드",
+    val recordRetentionSubtitle: String = "최근 90일",
     val nearbyCamera: NearbyCamera? = null,
     val recentRecords: List<RecentRecord> = emptyList(),
     val historySummary: HistorySummary = HistorySummary(

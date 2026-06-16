@@ -18,7 +18,12 @@ import com.joon.chalkak.ui.theme.ChalkakTheme
 @Composable
 fun MainScreen(
     uiState: MainUiState,
-    onTabSelected: (MainTab) -> Unit
+    onTabSelected: (MainTab) -> Unit,
+    onDrivingActionClick: () -> Unit,
+    onLocationPermissionClick: () -> Unit,
+    onCameraDataUpdateClick: () -> Unit,
+    onGpsAccuracyClick: () -> Unit,
+    onClearRecordsClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -31,9 +36,18 @@ fun MainScreen(
                     .fillMaxWidth()
             ) {
                 when (uiState.selectedTab) {
-                    MainTab.HOME -> HomeScreen(uiState)
+                    MainTab.HOME -> HomeScreen(
+                        uiState = uiState,
+                        onDrivingActionClick = onDrivingActionClick
+                    )
                     MainTab.HISTORY -> HistoryScreen(uiState)
-                    MainTab.SETTINGS -> SettingsScreen()
+                    MainTab.SETTINGS -> SettingsScreen(
+                        uiState = uiState,
+                        onLocationPermissionClick = onLocationPermissionClick,
+                        onCameraDataUpdateClick = onCameraDataUpdateClick,
+                        onGpsAccuracyClick = onGpsAccuracyClick,
+                        onClearRecordsClick = onClearRecordsClick
+                    )
                 }
             }
             BottomNavigationBar(
@@ -50,7 +64,12 @@ private fun MainScreenPreview() {
     ChalkakTheme {
         MainScreen(
             uiState = MainUiState(),
-            onTabSelected = {}
+            onTabSelected = {},
+            onDrivingActionClick = {},
+            onLocationPermissionClick = {},
+            onCameraDataUpdateClick = {},
+            onGpsAccuracyClick = {},
+            onClearRecordsClick = {}
         )
     }
 }
