@@ -91,7 +91,12 @@ fun HomeScreen(uiState: MainUiState) {
         }
 
         Spacer(modifier = Modifier.height(58.dp))
-        CameraCard(camera = uiState.nearbyCamera)
+        uiState.nearbyCamera?.let { camera ->
+            CameraCard(camera = camera)
+        } ?: EmptyInfoCard(
+            title = "주변 단속 카메라 없음",
+            subtitle = "카메라 데이터 업데이트 후 주행을 시작하세요"
+        )
         Spacer(modifier = Modifier.height(26.dp))
         PrimaryActionButton()
         Spacer(modifier = Modifier.height(28.dp))
@@ -104,8 +109,15 @@ fun HomeScreen(uiState: MainUiState) {
         )
 
         Spacer(modifier = Modifier.height(12.dp))
-        uiState.recentRecords.forEach { record ->
-            RecentRecordCard(record = record)
+        if (uiState.recentRecords.isEmpty()) {
+            EmptyInfoCard(
+                title = "최근 기록 없음",
+                subtitle = "주행 기록이 생성되면 여기에 표시됩니다"
+            )
+        } else {
+            uiState.recentRecords.forEach { record ->
+                RecentRecordCard(record = record)
+            }
         }
     }
 }
@@ -141,6 +153,30 @@ private fun CameraCard(camera: NearbyCamera) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+@Composable
+private fun EmptyInfoCard(title: String, subtitle: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceDark)
+            .padding(horizontal = 18.dp, vertical = 17.dp)
+    ) {
+        Text(
+            text = title,
+            color = TextPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = subtitle,
+            color = TextMuted,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

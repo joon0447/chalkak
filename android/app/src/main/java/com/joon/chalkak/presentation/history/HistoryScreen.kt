@@ -89,12 +89,40 @@ fun HistoryScreen(uiState: MainUiState) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        uiState.driveRecordGroups.forEach { group ->
-            DateLabel(group.date)
-            group.records.forEach { record ->
-                DriveRecordCard(record = record)
+        if (uiState.driveRecordGroups.isEmpty()) {
+            EmptyHistoryCard()
+        } else {
+            uiState.driveRecordGroups.forEach { group ->
+                DateLabel(group.date)
+                group.records.forEach { record ->
+                    DriveRecordCard(record = record)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyHistoryCard() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceDark)
+            .padding(18.dp)
+    ) {
+        Text(
+            text = "주행 기록 없음",
+            color = TextPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "주행을 완료하면 기록이 날짜별로 표시됩니다",
+            color = TextMuted,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

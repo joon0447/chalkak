@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.joon.chalkak.BuildConfig
 import com.joon.chalkak.presentation.common.AccentBlue
 import com.joon.chalkak.presentation.common.ArchiveIcon
 import com.joon.chalkak.presentation.common.CameraIcon
@@ -53,18 +54,18 @@ fun SettingsScreen() {
 
         SectionLabel("위치 및 데이터")
         SettingsGroup {
-            SettingsRow(PinIcon, "위치 권한", "항상 허용됨", Color(0xFF123E8C), AccentBlue)
+            SettingsRow(PinIcon, "위치 권한", "설정 필요", Color(0xFF123E8C), AccentBlue)
             SettingsDivider()
-            SettingsRow(CameraIcon, "카메라 데이터", "최신 업데이트: 2024년 6월 14일", Color(0xFF0D4422), com.joon.chalkak.presentation.common.SafeGreen)
+            SettingsRow(CameraIcon, "카메라 데이터", "업데이트 필요", Color(0xFF0D4422), com.joon.chalkak.presentation.common.SafeGreen)
             SettingsDivider()
-            SettingsRow(GpsIcon, "GPS 정확도 설정", "높은 정확도 모드", Color(0xFF4B3605), WarningAmber)
+            SettingsRow(GpsIcon, "GPS 정확도 설정", "미설정", Color(0xFF4B3605), WarningAmber)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         SectionLabel("기록 보관")
         SettingsGroup {
-            SettingsRow(ArchiveIcon, "기록 보관 기간", "최근 90일", Color(0xFF252C35), TextSecondary)
+            SettingsRow(ArchiveIcon, "기록 보관 기간", "미설정", Color(0xFF252C35), TextSecondary)
             SettingsDivider()
             SettingsRow(
                 icon = TrashIcon,
@@ -84,7 +85,7 @@ fun SettingsScreen() {
             SettingsDivider()
             SettingsRow(DocumentIcon, "이용약관", "", Color(0xFF252C35), TextSecondary)
             SettingsDivider()
-            SettingsRow(InfoIcon, "앱 버전", "1.0.0", Color(0xFF252C35), TextSecondary)
+            SettingsRow(InfoIcon, "앱 버전", BuildConfig.VERSION_NAME, Color(0xFF252C35), TextSecondary)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -98,7 +99,7 @@ fun SettingsScreen() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "© 2024 SnapCheck",
+            text = "© SnapCheck",
             color = TextMuted,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall,
