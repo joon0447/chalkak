@@ -26,6 +26,7 @@ import com.joon.chalkak.domain.LocationSpeedSample
 import com.joon.chalkak.domain.NearbySpeedCamera
 import com.joon.chalkak.domain.SpeedJudgementResult
 import com.joon.chalkak.domain.driving.CameraPassDetector
+import com.joon.chalkak.domain.filterForwardCorridor
 import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.ui.theme.ChalkakTheme
 import kotlinx.coroutines.Dispatchers
@@ -166,21 +167,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun handleSpeedSample(sample: LocationSpeedSample) {
-        val nearbyCameras = withContext(Dispatchers.IO) {
+        val forwardCameras = withContext(Dispatchers.IO) {
             cameraRepository.findNearbyCachedCameras(
                 currentLocation = sample.location,
                 radiusMeters = CAMERA_SEARCH_RADIUS_METERS,
-                maxResults = MAX_NEARBY_CAMERA_RESULTS
-            )
+                maxResults = MAX_NEARBY_CAMERA_CANDIDATES
+            ).filterForwardCorridor(sample)
+                .take(MAX_FORWARD_CAMERA_RESULTS)
         }
 
-        viewModel.updateNearbyCamera(nearbyCameras.firstOrNull()?.toUiModel())
+        viewModel.updateNearbyCamera(forwardCameras.firstOrNull()?.toUiModel())
 
         val session = currentSession ?: return
         val passRecords = cameraPassDetector.detectPasses(
             sessionId = session.id,
             sample = sample,
-            nearbyCameras = nearbyCameras
+            nearbyCameras = forwardCameras
         )
         if (passRecords.isEmpty()) return
 
@@ -360,7 +362,8 @@ class MainActivity : ComponentActivity() {
         const val TAG = "CameraApi"
         const val SPEED_TAG = "SpeedTracker"
         const val CAMERA_SEARCH_RADIUS_METERS = 1_000.0
-        const val MAX_NEARBY_CAMERA_RESULTS = 10
+        const val MAX_NEARBY_CAMERA_CANDIDATES = 50
+        const val MAX_FORWARD_CAMERA_RESULTS = 10
         const val INITIAL_CAMERA_CACHE_MAX_PAGES = 5
         const val MANUAL_CAMERA_CACHE_MAX_PAGES = 10
         const val RECORD_RETENTION_DAYS = 90L
