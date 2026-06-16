@@ -60,6 +60,13 @@ class MainViewModel : ViewModel() {
         uiState = uiState.copy(gpsAccuracySubtitle = nextSubtitle)
     }
 
+    fun updateAutoDrivingDetectionEnabled(enabled: Boolean) {
+        uiState = uiState.copy(
+            isAutoDrivingDetectionEnabled = enabled,
+            autoDrivingDetectionSubtitle = if (enabled) "켜짐 · 백그라운드 감시 중" else "꺼짐"
+        )
+    }
+
     fun stopSpeedTracking() {
         uiState = uiState.copy(
             isSpeedTracking = false,

@@ -1,6 +1,8 @@
 package com.joon.chalkak.presentation.main
 
 import android.Manifest
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,6 +18,7 @@ import com.joon.chalkak.data.camera.local.SpeedCameraDatabaseHelper
 import com.joon.chalkak.data.camera.local.SpeedCameraLocalDataSource
 import com.joon.chalkak.data.camera.remote.PublicDataCameraApiClient
 import com.joon.chalkak.data.camera.repository.SpeedCameraRepository
+import com.joon.chalkak.data.driving.DrivingDetectionService
 import com.joon.chalkak.data.drive.local.DriveRecordDatabaseHelper
 import com.joon.chalkak.data.drive.local.DriveRecordLocalDataSource
 import com.joon.chalkak.data.location.AndroidLocationSpeedTracker
@@ -56,6 +59,7 @@ class MainActivity : ComponentActivity() {
     private var speedTrackingJob: Job? = null
     private var currentSession: DriveSession? = null
     private var startTrackingAfterPermissionRequest: Boolean = false
+    private var startAutoDetectionAfterPermissionRequest: Boolean = false
 
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -67,11 +71,21 @@ class MainActivity : ComponentActivity() {
             if (startTrackingAfterPermissionRequest) {
                 startSpeedTracking()
             }
+            if (startAutoDetectionAfterPermissionRequest) {
+                if (hasNotificationPermission()) {
+                    startDrivingDetectionService()
+                } else {
+                    Log.w(SPEED_TAG, "Notification permission denied.")
+                    viewModel.updateAutoDrivingDetectionEnabled(false)
+                }
+            }
         } else {
             Log.w(SPEED_TAG, "Location permission denied.")
             viewModel.stopSpeedTracking()
+            viewModel.updateAutoDrivingDetectionEnabled(false)
         }
         startTrackingAfterPermissionRequest = false
+        startAutoDetectionAfterPermissionRequest = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,6 +103,7 @@ class MainActivity : ComponentActivity() {
                     onLocationPermissionClick = ::requestLocationPermissionFromSettings,
                     onCameraDataUpdateClick = ::refreshCameraCacheManually,
                     onGpsAccuracyClick = viewModel::toggleGpsAccuracyMode,
+                    onAutoDrivingDetectionClick = ::toggleAutoDrivingDetection,
                     onClearRecordsClick = ::clearDriveRecords
                 )
             }
@@ -229,6 +244,52 @@ class MainActivity : ComponentActivity() {
             )
         )
     }
+
+    private fun toggleAutoDrivingDetection() {
+        if (viewModel.uiState.isAutoDrivingDetectionEnabled) {
+            stopDrivingDetectionService()
+            return
+        }
+
+        if (hasLocationPermission() && hasNotificationPermission()) {
+            startDrivingDetectionService()
+        } else {
+            startAutoDetectionAfterPermissionRequest = true
+            locationPermissionLauncher.launch(requiredAutoDetectionPermissions())
+        }
+    }
+
+    private fun startDrivingDetectionService() {
+        val intent = Intent(this, DrivingDetectionService::class.java).apply {
+            action = DrivingDetectionService.ACTION_START
+        }
+        ContextCompat.startForegroundService(this, intent)
+        viewModel.updateAutoDrivingDetectionEnabled(true)
+    }
+
+    private fun stopDrivingDetectionService() {
+        val intent = Intent(this, DrivingDetectionService::class.java).apply {
+            action = DrivingDetectionService.ACTION_STOP
+        }
+        startService(intent)
+        viewModel.updateAutoDrivingDetectionEnabled(false)
+    }
+
+    private fun hasNotificationPermission(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+
+    private fun requiredAutoDetectionPermissions(): Array<String> =
+        buildList {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }.toTypedArray()
 
     private fun updateLocationPermissionUi() {
         viewModel.updateLocationPermissionSubtitle(

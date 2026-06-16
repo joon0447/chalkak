@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +29,7 @@ fun MainScreen(
     onLocationPermissionClick: () -> Unit,
     onCameraDataUpdateClick: () -> Unit,
     onGpsAccuracyClick: () -> Unit,
+    onAutoDrivingDetectionClick: () -> Unit,
     onClearRecordsClick: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -42,6 +45,7 @@ fun MainScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .statusBarsPadding()
             ) {
                 NavHost(
                     navController = navController,
@@ -63,6 +67,7 @@ fun MainScreen(
                             onLocationPermissionClick = onLocationPermissionClick,
                             onCameraDataUpdateClick = onCameraDataUpdateClick,
                             onGpsAccuracyClick = onGpsAccuracyClick,
+                            onAutoDrivingDetectionClick = onAutoDrivingDetectionClick,
                             onClearRecordsClick = onClearRecordsClick
                         )
                     }
@@ -70,6 +75,7 @@ fun MainScreen(
             }
             BottomNavigationBar(
                 selectedTab = selectedTab,
+                modifier = Modifier.navigationBarsPadding(),
                 onTabSelected = { tab ->
                     navController.navigate(tab.route) {
                         popUpTo(navController.graph.startDestinationId) {
@@ -94,6 +100,7 @@ private fun MainScreenPreview() {
             onLocationPermissionClick = {},
             onCameraDataUpdateClick = {},
             onGpsAccuracyClick = {},
+            onAutoDrivingDetectionClick = {},
             onClearRecordsClick = {}
         )
     }

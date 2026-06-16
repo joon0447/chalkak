@@ -20,6 +20,7 @@ import com.joon.chalkak.BuildConfig
 import com.joon.chalkak.presentation.common.AccentBlue
 import com.joon.chalkak.presentation.common.ArchiveIcon
 import com.joon.chalkak.presentation.common.CameraIcon
+import com.joon.chalkak.presentation.common.CarIcon
 import com.joon.chalkak.presentation.common.DocumentIcon
 import com.joon.chalkak.presentation.common.GpsIcon
 import com.joon.chalkak.presentation.common.InfoIcon
@@ -42,6 +43,7 @@ fun SettingsScreen(
     onLocationPermissionClick: () -> Unit,
     onCameraDataUpdateClick: () -> Unit,
     onGpsAccuracyClick: () -> Unit,
+    onAutoDrivingDetectionClick: () -> Unit,
     onClearRecordsClick: () -> Unit
 ) {
     Column(
@@ -86,6 +88,15 @@ fun SettingsScreen(
                 Color(0xFF4B3605),
                 WarningAmber,
                 onClick = onGpsAccuracyClick
+            )
+            SettingsDivider()
+            SettingsRow(
+                CarIcon,
+                "자동 주행 감지",
+                uiState.autoDrivingDetectionSubtitle,
+                Color(0xFF123E8C),
+                AccentBlue,
+                onClick = onAutoDrivingDetectionClick
             )
         }
 

@@ -150,9 +150,13 @@ fun TinyIconBox(icon: ImageVector, color: Color) {
 }
 
 @Composable
-fun BottomNavigationBar(selectedTab: MainTab, onTabSelected: (MainTab) -> Unit) {
+fun BottomNavigationBar(
+    selectedTab: MainTab,
+    onTabSelected: (MainTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(80.dp)
             .background(SurfaceDarker)
