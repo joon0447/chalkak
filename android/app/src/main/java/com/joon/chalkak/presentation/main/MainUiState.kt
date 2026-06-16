@@ -7,7 +7,6 @@ import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.model.RecentRecord
 
 data class MainUiState(
-    val selectedTab: MainTab = MainTab.HOME,
     val currentSpeedKmh: Int = 0,
     val drivingStatus: DrivingStatus = DrivingStatus.UNKNOWN,
     val isSpeedTracking: Boolean = false,

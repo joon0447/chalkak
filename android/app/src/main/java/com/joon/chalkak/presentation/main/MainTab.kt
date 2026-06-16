@@ -1,7 +1,12 @@
 package com.joon.chalkak.presentation.main
 
-enum class MainTab {
-    HOME,
-    HISTORY,
-    SETTINGS
+enum class MainTab(val route: String) {
+    HOME("home"),
+    HISTORY("history"),
+    SETTINGS("settings");
+
+    companion object {
+        fun fromRoute(route: String?): MainTab =
+            entries.firstOrNull { it.route == route } ?: HOME
+    }
 }

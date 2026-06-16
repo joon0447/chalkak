@@ -84,7 +84,6 @@ class MainActivity : ComponentActivity() {
             ChalkakTheme {
                 MainScreen(
                     uiState = viewModel.uiState,
-                    onTabSelected = viewModel::selectTab,
                     onDrivingActionClick = ::toggleSpeedTracking,
                     onLocationPermissionClick = ::requestLocationPermissionFromSettings,
                     onCameraDataUpdateClick = ::refreshCameraCacheManually,

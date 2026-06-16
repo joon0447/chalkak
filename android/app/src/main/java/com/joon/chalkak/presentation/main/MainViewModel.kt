@@ -15,10 +15,6 @@ class MainViewModel : ViewModel() {
     var uiState by mutableStateOf(MainUiState())
         private set
 
-    fun selectTab(tab: MainTab) {
-        uiState = uiState.copy(selectedTab = tab)
-    }
-
     fun setSpeedTracking(isTracking: Boolean) {
         uiState = uiState.copy(isSpeedTracking = isTracking)
     }

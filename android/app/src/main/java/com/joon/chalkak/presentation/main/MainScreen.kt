@@ -6,8 +6,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.joon.chalkak.presentation.common.AppBackground
 import com.joon.chalkak.presentation.common.BottomNavigationBar
 import com.joon.chalkak.presentation.history.HistoryScreen
@@ -18,13 +23,16 @@ import com.joon.chalkak.ui.theme.ChalkakTheme
 @Composable
 fun MainScreen(
     uiState: MainUiState,
-    onTabSelected: (MainTab) -> Unit,
     onDrivingActionClick: () -> Unit,
     onLocationPermissionClick: () -> Unit,
     onCameraDataUpdateClick: () -> Unit,
     onGpsAccuracyClick: () -> Unit,
     onClearRecordsClick: () -> Unit
 ) {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val selectedTab = MainTab.fromRoute(navBackStackEntry?.destination?.route)
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = AppBackground
@@ -35,24 +43,42 @@ fun MainScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                when (uiState.selectedTab) {
-                    MainTab.HOME -> HomeScreen(
-                        uiState = uiState,
-                        onDrivingActionClick = onDrivingActionClick
-                    )
-                    MainTab.HISTORY -> HistoryScreen(uiState)
-                    MainTab.SETTINGS -> SettingsScreen(
-                        uiState = uiState,
-                        onLocationPermissionClick = onLocationPermissionClick,
-                        onCameraDataUpdateClick = onCameraDataUpdateClick,
-                        onGpsAccuracyClick = onGpsAccuracyClick,
-                        onClearRecordsClick = onClearRecordsClick
-                    )
+                NavHost(
+                    navController = navController,
+                    startDestination = MainTab.HOME.route,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    composable(MainTab.HOME.route) {
+                        HomeScreen(
+                            uiState = uiState,
+                            onDrivingActionClick = onDrivingActionClick
+                        )
+                    }
+                    composable(MainTab.HISTORY.route) {
+                        HistoryScreen(uiState)
+                    }
+                    composable(MainTab.SETTINGS.route) {
+                        SettingsScreen(
+                            uiState = uiState,
+                            onLocationPermissionClick = onLocationPermissionClick,
+                            onCameraDataUpdateClick = onCameraDataUpdateClick,
+                            onGpsAccuracyClick = onGpsAccuracyClick,
+                            onClearRecordsClick = onClearRecordsClick
+                        )
+                    }
                 }
             }
             BottomNavigationBar(
-                selectedTab = uiState.selectedTab,
-                onTabSelected = onTabSelected
+                selectedTab = selectedTab,
+                onTabSelected = { tab ->
+                    navController.navigate(tab.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
     }
@@ -64,7 +90,6 @@ private fun MainScreenPreview() {
     ChalkakTheme {
         MainScreen(
             uiState = MainUiState(),
-            onTabSelected = {},
             onDrivingActionClick = {},
             onLocationPermissionClick = {},
             onCameraDataUpdateClick = {},
