@@ -1,6 +1,7 @@
 package com.joon.chalkak.presentation.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +44,10 @@ import com.joon.chalkak.presentation.common.WarningIcon
 import com.joon.chalkak.presentation.main.MainUiState
 
 @Composable
-fun HistoryScreen(uiState: MainUiState) {
+fun HistoryScreen(
+    uiState: MainUiState,
+    onRecordClick: (DriveRecord) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -95,7 +99,10 @@ fun HistoryScreen(uiState: MainUiState) {
             uiState.driveRecordGroups.forEach { group ->
                 DateLabel(group.date)
                 group.records.forEach { record ->
-                    DriveRecordCard(record = record)
+                    DriveRecordCard(
+                        record = record,
+                        onClick = { onRecordClick(record) }
+                    )
                 }
             }
         }
@@ -161,13 +168,17 @@ private fun DateLabel(text: String) {
 }
 
 @Composable
-private fun DriveRecordCard(record: DriveRecord) {
+private fun DriveRecordCard(
+    record: DriveRecord,
+    onClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 14.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(SurfaceDark)
+            .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
         Row(

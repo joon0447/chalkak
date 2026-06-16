@@ -9,6 +9,7 @@ import com.joon.chalkak.domain.EnforcementType
 import com.joon.chalkak.domain.SpeedCamera
 import com.joon.chalkak.domain.SpeedJudgement
 import com.joon.chalkak.domain.SpeedJudgementResult
+import com.joon.chalkak.model.CameraPassDetail
 import com.joon.chalkak.model.DriveRecord
 import com.joon.chalkak.model.DriveRecordGroup
 import com.joon.chalkak.model.HistorySummary
@@ -146,14 +147,36 @@ class DriveRecordLocalDataSource(
         }
 
         return DriveRecord(
+            id = id,
             time = "${startedAtMillis.toTimeText()} ~ ${(endedAtMillis ?: System.currentTimeMillis()).toTimeText()}",
             route = records.routeText(),
             cameraCount = "카메라 ${records.size}개",
             safeCount = "안전 $safeCount",
             warningText = if (warningCount > 0) "주의 $warningCount" else "",
-            status = status
+            status = status,
+            cameraPasses = records.map { it.toCameraPassDetail() }
         )
     }
+
+    private fun CameraPassRecord.toCameraPassDetail(): CameraPassDetail =
+        CameraPassDetail(
+            passedTime = passedAtMillis.toTimeText(),
+            location = camera.location,
+            roadName = camera.roadName,
+            measuredSpeedText = "${measuredSpeedKmh}km/h",
+            speedLimitText = camera.speedLimitKmh?.let { "${it}km/h" } ?: "-",
+            enforcementThresholdText = judgement.enforcementThresholdKmh?.let { "${it}km/h" } ?: "-",
+            distanceText = distanceToCameraMeters?.let { "${it.toInt()}m" } ?: "-",
+            status = judgement.result.toDrivingStatus()
+        )
+
+    private fun SpeedJudgementResult.toDrivingStatus(): DrivingStatus =
+        when (this) {
+            SpeedJudgementResult.SAFE -> DrivingStatus.SAFE
+            SpeedJudgementResult.WARNING,
+            SpeedJudgementResult.ENFORCEMENT_RISK -> DrivingStatus.WARNING
+            SpeedJudgementResult.UNKNOWN -> DrivingStatus.UNKNOWN
+        }
 
     private fun List<CameraPassRecord>.routeText(): String =
         map { it.camera.roadName ?: it.camera.location }

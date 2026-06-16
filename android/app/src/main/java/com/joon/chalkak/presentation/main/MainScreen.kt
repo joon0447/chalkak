@@ -15,9 +15,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.joon.chalkak.presentation.common.AppBackground
 import com.joon.chalkak.presentation.common.BottomNavigationBar
 import com.joon.chalkak.presentation.history.HistoryScreen
+import com.joon.chalkak.presentation.detail.HistoryDetailScreen
 import com.joon.chalkak.presentation.home.HomeScreen
 import com.joon.chalkak.presentation.settings.SettingsScreen
 import com.joon.chalkak.ui.theme.ChalkakTheme
@@ -34,7 +37,9 @@ fun MainScreen(
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val selectedTab = MainTab.fromRoute(navBackStackEntry?.destination?.route)
+    val currentRoute = navBackStackEntry?.destination?.route
+    val selectedTab = MainTab.fromRoute(currentRoute)
+    val showBottomNavigation = MainTab.isTabRoute(currentRoute)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -59,7 +64,26 @@ fun MainScreen(
                         )
                     }
                     composable(MainTab.HISTORY.route) {
-                        HistoryScreen(uiState)
+                        HistoryScreen(
+                            uiState = uiState,
+                            onRecordClick = { record ->
+                                navController.navigate(historyDetailRoute(record.id))
+                            }
+                        )
+                    }
+                    composable(
+                        route = HISTORY_DETAIL_ROUTE,
+                        arguments = listOf(navArgument(HISTORY_RECORD_ID_ARGUMENT) { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val recordId = backStackEntry.arguments?.getString(HISTORY_RECORD_ID_ARGUMENT)
+                        val record = uiState.driveRecordGroups
+                            .asSequence()
+                            .flatMap { it.records.asSequence() }
+                            .firstOrNull { it.id == recordId }
+                        HistoryDetailScreen(
+                            record = record,
+                            onBackClick = { navController.popBackStack() }
+                        )
                     }
                     composable(MainTab.SETTINGS.route) {
                         SettingsScreen(
@@ -73,22 +97,29 @@ fun MainScreen(
                     }
                 }
             }
-            BottomNavigationBar(
-                selectedTab = selectedTab,
-                modifier = Modifier.navigationBarsPadding(),
-                onTabSelected = { tab ->
-                    navController.navigate(tab.route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+            if (showBottomNavigation) {
+                BottomNavigationBar(
+                    selectedTab = selectedTab,
+                    modifier = Modifier.navigationBarsPadding(),
+                    onTabSelected = { tab ->
+                        navController.navigate(tab.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
+
+private const val HISTORY_RECORD_ID_ARGUMENT = "recordId"
+private const val HISTORY_DETAIL_ROUTE = "history/{$HISTORY_RECORD_ID_ARGUMENT}"
+
+private fun historyDetailRoute(recordId: String): String = "history/$recordId"
 
 @Preview(showBackground = true, backgroundColor = 0xFF0B1016)
 @Composable

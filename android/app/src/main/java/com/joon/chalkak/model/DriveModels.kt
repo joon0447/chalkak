@@ -25,10 +25,23 @@ data class DriveRecordGroup(
 )
 
 data class DriveRecord(
+    val id: String,
     val time: String,
     val route: String,
     val cameraCount: String,
     val safeCount: String,
     val warningText: String = "",
+    val status: DrivingStatus,
+    val cameraPasses: List<CameraPassDetail> = emptyList()
+)
+
+data class CameraPassDetail(
+    val passedTime: String,
+    val location: String,
+    val roadName: String?,
+    val measuredSpeedText: String,
+    val speedLimitText: String,
+    val enforcementThresholdText: String,
+    val distanceText: String,
     val status: DrivingStatus
 )

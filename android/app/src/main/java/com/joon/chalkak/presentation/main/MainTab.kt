@@ -8,5 +8,8 @@ enum class MainTab(val route: String) {
     companion object {
         fun fromRoute(route: String?): MainTab =
             entries.firstOrNull { it.route == route } ?: HOME
+
+        fun isTabRoute(route: String?): Boolean =
+            entries.any { it.route == route }
     }
 }
