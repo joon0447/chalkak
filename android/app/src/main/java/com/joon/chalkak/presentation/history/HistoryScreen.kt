@@ -65,7 +65,6 @@ fun HistoryScreen(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold
             )
-            TinyIconBox(icon = SlidersIcon, color = TextSecondary)
         }
 
         Spacer(modifier = Modifier.height(18.dp))

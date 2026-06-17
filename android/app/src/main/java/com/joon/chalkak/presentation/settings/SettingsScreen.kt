@@ -56,9 +56,7 @@ fun SettingsScreen(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold
         )
-
         Spacer(modifier = Modifier.height(22.dp))
-
         SectionLabel("위치 및 데이터")
         SettingsGroup {
             SettingsRow(
@@ -88,18 +86,9 @@ fun SettingsScreen(
                 onClick = onGpsAccuracyClick
             )
         }
-
         Spacer(modifier = Modifier.height(24.dp))
-
-        SectionLabel("기록 보관")
+        SectionLabel("기록")
         SettingsGroup {
-            SettingsRow(
-                ArchiveIcon,
-                "기록 보관 기간",
-                uiState.recordRetentionSubtitle,
-                Color(0xFF252C35),
-                TextSecondary
-            )
             SettingsDivider()
             SettingsRow(
                 icon = TrashIcon,
@@ -111,9 +100,7 @@ fun SettingsScreen(
                 onClick = onClearRecordsClick
             )
         }
-
         Spacer(modifier = Modifier.height(24.dp))
-
         SectionLabel("정보")
         SettingsGroup {
             SettingsRow(ShieldIcon, "개인정보 처리방침", "", Color(0xFF123E8C), AccentBlue)
@@ -122,19 +109,9 @@ fun SettingsScreen(
             SettingsDivider()
             SettingsRow(InfoIcon, "앱 버전", BuildConfig.VERSION_NAME, Color(0xFF252C35), TextSecondary)
         }
-
         Spacer(modifier = Modifier.height(32.dp))
-
         Text(
             text = "찍혔나?는 참고용 주행 속도 로그이며,\n단속 여부를 보장하지 않습니다.",
-            color = TextMuted,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "© SnapCheck",
             color = TextMuted,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall,
