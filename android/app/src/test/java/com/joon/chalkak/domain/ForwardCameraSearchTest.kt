@@ -49,6 +49,65 @@ class ForwardCameraSearchTest {
         assertEquals(0, result.size)
     }
 
+    @Test
+    fun filterForwardCorridor_excludesCameraWithOppositeExplicitDirectionHint() {
+        val result = listOf(
+            nearbyCamera(
+                distanceMeters = 80.0,
+                bearingToCameraDegrees = 0.0,
+                location = "테스트 지점 남행"
+            )
+        ).filterForwardCorridor(movingNorthSample())
+
+        assertEquals(0, result.size)
+    }
+
+    @Test
+    fun filterForwardCorridor_keepsCameraWithMatchingExplicitDirectionHint() {
+        val result = listOf(
+            nearbyCamera(
+                distanceMeters = 80.0,
+                bearingToCameraDegrees = 0.0,
+                location = "테스트 지점 북행"
+            )
+        ).filterForwardCorridor(movingNorthSample())
+
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun filterForwardCorridor_doesNotTreatPlaceNameAsCardinalDirection() {
+        val result = listOf(
+            nearbyCamera(
+                distanceMeters = 80.0,
+                bearingToCameraDegrees = 0.0,
+                location = "중앙시장앞(서면방향)"
+            )
+        ).filterForwardCorridor(movingNorthSample())
+
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun filterForwardCorridor_collapsesNearbyDirectionalDuplicatesOnSameRoad() {
+        val result = listOf(
+            nearbyCamera(
+                id = "north",
+                distanceMeters = 80.0,
+                bearingToCameraDegrees = 0.0,
+                location = "테스트 지점 북행"
+            ),
+            nearbyCamera(
+                id = "unknown",
+                distanceMeters = 82.0,
+                bearingToCameraDegrees = 0.0,
+                location = "테스트 지점"
+            )
+        ).filterForwardCorridor(movingNorthSample())
+
+        assertEquals(listOf("north"), result.map { it.camera.id })
+    }
+
     private fun movingNorthSample(
         speedKmh: Double = 40.0,
         bearingDegrees: Double? = 0.0
@@ -62,15 +121,17 @@ class ForwardCameraSearchTest {
         )
 
     private fun nearbyCamera(
+        id: String = "camera",
         distanceMeters: Double,
-        bearingToCameraDegrees: Double
+        bearingToCameraDegrees: Double,
+        location: String = "테스트 위치"
     ): NearbySpeedCamera =
         NearbySpeedCamera(
             camera = SpeedCamera(
-                id = "camera",
+                id = id,
                 latitude = 37.0,
                 longitude = 127.0,
-                location = "테스트 위치",
+                location = location,
                 roadName = "테스트로",
                 roadDirection = null,
                 enforcementType = EnforcementType.SPEED,
