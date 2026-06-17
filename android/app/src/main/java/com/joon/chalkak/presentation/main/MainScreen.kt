@@ -60,7 +60,8 @@ fun MainScreen(
                     composable(MainTab.HOME.route) {
                         HomeScreen(
                             uiState = uiState,
-                            onDrivingActionClick = onDrivingActionClick
+                            onDrivingActionClick = onDrivingActionClick,
+                            onAutoDrivingDetectionClick = onAutoDrivingDetectionClick
                         )
                     }
                     composable(MainTab.HISTORY.route) {
@@ -91,7 +92,6 @@ fun MainScreen(
                             onLocationPermissionClick = onLocationPermissionClick,
                             onCameraDataUpdateClick = onCameraDataUpdateClick,
                             onGpsAccuracyClick = onGpsAccuracyClick,
-                            onAutoDrivingDetectionClick = onAutoDrivingDetectionClick,
                             onClearRecordsClick = onClearRecordsClick
                         )
                     }

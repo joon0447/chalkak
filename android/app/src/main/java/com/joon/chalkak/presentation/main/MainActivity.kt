@@ -110,6 +110,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        loadDriveRecords()
+    }
+
     private fun toggleSpeedTracking() {
         if (viewModel.uiState.isSpeedTracking) {
             stopSpeedTracking()

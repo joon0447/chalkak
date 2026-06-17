@@ -321,7 +321,9 @@ private fun CameraPassRecord.toLogText(): String =
         "limit=${camera.speedLimitKmh}, result=${judgement.result}, risk=${judgement.result == SpeedJudgementResult.ENFORCEMENT_RISK}"
 
 private fun DrivingDetectionService.openAppPendingIntent(): PendingIntent {
-    val intent = Intent(this, MainActivity::class.java)
+    val intent = Intent(this, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
     return PendingIntent.getActivity(
         this,
         0,

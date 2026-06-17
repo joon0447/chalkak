@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,8 +31,10 @@ import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.model.RecentRecord
 import com.joon.chalkak.presentation.common.AccentBlue
 import com.joon.chalkak.presentation.common.CameraIcon
+import com.joon.chalkak.presentation.common.CarIcon
 import com.joon.chalkak.presentation.common.CheckCircleIcon
 import com.joon.chalkak.presentation.common.PlayIcon
+import com.joon.chalkak.presentation.common.SafeGreen
 import com.joon.chalkak.presentation.common.StatusPill
 import com.joon.chalkak.presentation.common.SurfaceDark
 import com.joon.chalkak.presentation.common.TextMuted
@@ -43,7 +46,8 @@ import com.joon.chalkak.presentation.main.MainUiState
 @Composable
 fun HomeScreen(
     uiState: MainUiState,
-    onDrivingActionClick: () -> Unit
+    onDrivingActionClick: () -> Unit,
+    onAutoDrivingDetectionClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -105,6 +109,12 @@ fun HomeScreen(
             isTracking = uiState.isSpeedTracking,
             onClick = onDrivingActionClick
         )
+        Spacer(modifier = Modifier.height(12.dp))
+        AutoDrivingDetectionToggle(
+            enabled = uiState.isAutoDrivingDetectionEnabled,
+            subtitle = uiState.autoDrivingDetectionSubtitle,
+            onClick = onAutoDrivingDetectionClick
+        )
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
@@ -125,6 +135,45 @@ fun HomeScreen(
                 RecentRecordCard(record = record)
             }
         }
+    }
+}
+
+@Composable
+private fun AutoDrivingDetectionToggle(
+    enabled: Boolean,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceDark)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = CarIcon,
+            contentDescription = null,
+            tint = if (enabled) SafeGreen else TextMuted,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "자동 주행 감지",
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(text = subtitle, color = TextMuted, style = MaterialTheme.typography.bodySmall)
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = { onClick() }
+        )
     }
 }
 
