@@ -66,7 +66,6 @@ fun HomeScreen(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold
             )
-            StatusPill(status = uiState.drivingStatus)
         }
 
         Spacer(modifier = Modifier.height(66.dp))
