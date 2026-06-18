@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -24,12 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joon.chalkak.R
 import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.model.RecentRecord
-import com.joon.chalkak.presentation.common.AccentBlue
 import com.joon.chalkak.presentation.common.CameraIcon
 import com.joon.chalkak.presentation.common.CarIcon
 import com.joon.chalkak.presentation.common.CheckCircleIcon
@@ -55,21 +57,6 @@ fun HomeScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 32.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "찍혔나?",
-                color = TextPrimary,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(66.dp))
-
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -153,7 +140,7 @@ private fun AutoDrivingDetectionToggle(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = CarIcon,
+            painter = painterResource(R.drawable.car),
             contentDescription = null,
             tint = if (enabled) SafeGreen else TextMuted,
             modifier = Modifier.size(22.dp)
@@ -239,31 +226,47 @@ private fun PrimaryActionButton(
     isTracking: Boolean,
     onClick: () -> Unit
 ) {
+    val buttonColor = if (isTracking) StopDrivingButtonColor else StartDrivingButtonColor
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(32.dp))
-            .background(AccentBlue)
+            .background(buttonColor)
             .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = PlayIcon,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(22.dp)
-        )
+        if (isTracking) {
+            Icon(
+                painter = painterResource(R.drawable.pause),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+            )
+        } else {
+            Icon(
+                imageVector = PlayIcon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+            )
+        }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = if (isTracking) "주행 기록 종료" else "주행 기록 시작",
             color = Color.White,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(
+
+            ),
             fontWeight = FontWeight.Bold
         )
     }
 }
+
+private val StartDrivingButtonColor = Color(0xFF085B26)
+private val StopDrivingButtonColor = Color(0xFFAD0303)
 
 @Composable
 private fun RecentRecordCard(record: RecentRecord) {
