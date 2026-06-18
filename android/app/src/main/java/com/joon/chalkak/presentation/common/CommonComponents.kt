@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,10 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.joon.chalkak.R
 import com.joon.chalkak.domain.DrivingStatus
 import com.joon.chalkak.presentation.main.MainTab
 
@@ -164,9 +170,9 @@ fun BottomNavigationBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomTab(HomeIcon, "홈", selectedTab == MainTab.HOME) { onTabSelected(MainTab.HOME) }
-        BottomTab(HistoryIcon, "기록", selectedTab == MainTab.HISTORY) { onTabSelected(MainTab.HISTORY) }
-        BottomTab(SettingsIcon, "설정", selectedTab == MainTab.SETTINGS) { onTabSelected(MainTab.SETTINGS) }
+        BottomTab(Icons.Default.Home, "홈", selectedTab == MainTab.HOME) { onTabSelected(MainTab.HOME) }
+        BottomTab(painterResource(R.drawable.history), "기록", selectedTab == MainTab.HISTORY) { onTabSelected(MainTab.HISTORY) }
+        BottomTab(Icons.Default.Settings, "설정", selectedTab == MainTab.SETTINGS) { onTabSelected(MainTab.SETTINGS) }
     }
 }
 
@@ -177,7 +183,7 @@ private fun BottomTab(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val color = if (selected) TextPrimary else TextMuted
+    val color = if (selected) SelectedBottomTabColor else TextMuted
     Column(
         modifier = Modifier
             .width(52.dp)
@@ -191,8 +197,37 @@ private fun BottomTab(
         Text(
             text = label,
             color = color,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun BottomTab(
+    icon: Painter,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val color = if (selected) SelectedBottomTabColor else TextMuted
+    Column(
+        modifier = Modifier
+            .width(52.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(painter = icon, contentDescription = label, tint = color, modifier = Modifier.size(23.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = color,
             fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
         )
     }
 }
+
+private val SelectedBottomTabColor = Color(0xFF4ADE80)
