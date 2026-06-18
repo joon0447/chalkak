@@ -24,12 +24,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.joon.chalkak.R
 import com.joon.chalkak.model.DriveRecord
 import com.joon.chalkak.presentation.common.AccentBlue
-import com.joon.chalkak.presentation.common.CarIcon
 import com.joon.chalkak.presentation.common.SafeGreen
 import com.joon.chalkak.presentation.common.ShieldIcon
 import com.joon.chalkak.presentation.common.SlidersIcon
@@ -67,11 +70,18 @@ fun HistoryScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "5분 미만의 주행은 기록되지 않습니다",
+            color = TextMuted,
+            style = MaterialTheme.typography.bodySmall
+        )
+
         Spacer(modifier = Modifier.height(18.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SummaryCard(
-                icon = CarIcon,
+                icon = painterResource(R.drawable.car),
                 value = uiState.historySummary.totalDriveCount,
                 label = "총 주행",
                 color = AccentBlue
@@ -137,23 +147,72 @@ private fun RowScope.SummaryCard(icon: ImageVector, value: String, label: String
     Column(
         modifier = Modifier
             .weight(1f)
-            .height(78.dp)
+            .height(SummaryCardHeight)
             .clip(RoundedCornerShape(10.dp))
             .background(SurfaceDark)
-            .padding(vertical = 12.dp),
+            .padding(horizontal = 6.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.Center
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = value,
+            modifier = Modifier.fillMaxWidth(),
             color = TextPrimary,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
-        Text(text = label, color = TextMuted, style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = label,
+            modifier = Modifier.fillMaxWidth(),
+            color = TextMuted,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
     }
 }
+
+@Composable
+private fun RowScope.SummaryCard(icon: Painter, value: String, label: String, color: Color) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .height(SummaryCardHeight)
+            .clip(RoundedCornerShape(10.dp))
+            .background(SurfaceDark)
+            .padding(horizontal = 6.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(painter = icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = value,
+            modifier = Modifier.fillMaxWidth(),
+            color = TextPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = label,
+            modifier = Modifier.fillMaxWidth(),
+            color = TextMuted,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+    }
+}
+
+private val SummaryCardHeight = 96.dp
 
 @Composable
 private fun DateLabel(text: String) {

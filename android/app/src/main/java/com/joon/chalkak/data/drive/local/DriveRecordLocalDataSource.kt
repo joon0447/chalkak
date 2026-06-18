@@ -57,7 +57,10 @@ class DriveRecordLocalDataSource(
     }
 
     fun getRecentRecords(limit: Int = 3): List<RecentRecord> {
-        val records = queryPassRecords(orderBy = "passed_at_millis DESC", limit = limit.toString())
+        val recordableSessionIds = queryRecordableSessions().map { it.id }.toSet()
+        val records = queryPassRecords(orderBy = "passed_at_millis DESC")
+            .filter { it.sessionId in recordableSessionIds }
+            .take(limit)
         return records.map { record ->
             RecentRecord(
                 title = "${record.camera.location} · ${record.measuredSpeedKmh} km/h",
@@ -67,8 +70,10 @@ class DriveRecordLocalDataSource(
     }
 
     fun getHistorySummary(): HistorySummary {
-        val sessions = querySessions()
+        val sessions = queryRecordableSessions()
+        val recordableSessionIds = sessions.map { it.id }.toSet()
         val passRecords = queryPassRecords(orderBy = "passed_at_millis DESC")
+            .filter { it.sessionId in recordableSessionIds }
         val safeCount = passRecords.count { it.judgement.result == SpeedJudgementResult.SAFE }
         val riskyCount = passRecords.count {
             it.judgement.result == SpeedJudgementResult.WARNING ||
@@ -91,16 +96,26 @@ class DriveRecordLocalDataSource(
         val passRecordsBySession = queryPassRecords(orderBy = "passed_at_millis ASC")
             .groupBy { it.sessionId }
 
-        return querySessions()
+        return queryRecordableSessions()
             .sortedByDescending { it.startedAtMillis }
             .map { session ->
                 val records = passRecordsBySession[session.id].orEmpty()
-                DriveRecordGroup(
-                    date = session.startedAtMillis.toDateLabel(),
-                    records = listOf(session.toDriveRecord(records))
-                )
+                session.startedAtMillis.toDateLabel() to session.toDriveRecord(records)
+            }
+            .groupBy(
+                keySelector = { it.first },
+                valueTransform = { it.second }
+            )
+            .map { (date, records) ->
+                DriveRecordGroup(date = date, records = records)
             }
     }
+
+    private fun queryRecordableSessions(): List<DriveSession> =
+        querySessions().filter { session ->
+            val endedAtMillis = session.endedAtMillis ?: return@filter false
+            endedAtMillis - session.startedAtMillis >= MIN_RECORDABLE_DRIVE_DURATION_MILLIS
+        }
 
     fun clear() {
         val db = databaseHelper.writableDatabase
@@ -308,6 +323,7 @@ class DriveRecordLocalDataSource(
         val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.KOREAN)
         val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)
+        const val MIN_RECORDABLE_DRIVE_DURATION_MILLIS = 5 * 60 * 1000L
         val PASS_COLUMNS = arrayOf(
             "id",
             "session_id",
