@@ -98,6 +98,7 @@ fun SettingsRow(
     iconColor: Color,
     titleColor: Color = TextPrimary,
     enabled: Boolean = true,
+    showIconBackground: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     Row(
@@ -111,7 +112,7 @@ fun SettingsRow(
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(iconBackground),
+                .then(if (showIconBackground) Modifier.background(iconBackground) else Modifier),
             contentAlignment = Alignment.Center
         ) {
             Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
@@ -147,6 +148,7 @@ fun SettingsRow(
     iconColor: Color,
     titleColor: Color = TextPrimary,
     enabled: Boolean = true,
+    showIconBackground: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     Row(
@@ -160,10 +162,10 @@ fun SettingsRow(
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(iconBackground),
+                .then(if (showIconBackground) Modifier.background(iconBackground) else Modifier),
             contentAlignment = Alignment.Center
         ) {
-            Icon(painter = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
+            Icon(painter = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

@@ -20,17 +20,13 @@ import androidx.compose.ui.unit.dp
 import com.joon.chalkak.BuildConfig
 import com.joon.chalkak.R
 import com.joon.chalkak.presentation.common.AccentBlue
-import com.joon.chalkak.presentation.common.DocumentIcon
-import com.joon.chalkak.presentation.common.InfoIcon
 import com.joon.chalkak.presentation.common.SectionLabel
 import com.joon.chalkak.presentation.common.SettingsDivider
 import com.joon.chalkak.presentation.common.SettingsGroup
 import com.joon.chalkak.presentation.common.SettingsRow
-import com.joon.chalkak.presentation.common.ShieldIcon
 import com.joon.chalkak.presentation.common.TextMuted
 import com.joon.chalkak.presentation.common.TextPrimary
 import com.joon.chalkak.presentation.common.TextSecondary
-import com.joon.chalkak.presentation.common.TrashIcon
 import com.joon.chalkak.presentation.main.MainUiState
 
 @Composable
@@ -61,6 +57,7 @@ fun SettingsScreen(
                 uiState.locationPermissionSubtitle,
                 Color(0xFF123E8C),
                 AccentBlue,
+                showIconBackground = false,
                 onClick = onLocationPermissionClick
             )
             SettingsDivider()
@@ -71,6 +68,7 @@ fun SettingsScreen(
                 Color(0xFF0D4422),
                 com.joon.chalkak.presentation.common.SafeGreen,
                 enabled = !uiState.isCameraDataUpdating,
+                showIconBackground = false,
                 onClick = onCameraDataUpdateClick
             )
         }
@@ -78,23 +76,45 @@ fun SettingsScreen(
         SectionLabel("기록")
         SettingsGroup {
             SettingsRow(
-                icon = TrashIcon,
+                icon = painterResource(R.drawable.mdi_trash_outline),
                 title = "모든 기록 삭제",
                 subtitle = "로컬에 저장된 주행 기록을 모두 삭제합니다",
                 iconBackground = Color(0xFF4A1417),
                 iconColor = Color(0xFFFF4A55),
                 titleColor = Color(0xFFFF4A55),
+                showIconBackground = false,
                 onClick = onClearRecordsClick
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
         SectionLabel("정보")
         SettingsGroup {
-            SettingsRow(ShieldIcon, "개인정보 처리방침", "", Color(0xFF123E8C), AccentBlue)
+            SettingsRow(
+                painterResource(R.drawable.shield),
+                "개인정보 처리방침",
+                "",
+                Color(0xFF123E8C),
+                AccentBlue,
+                showIconBackground = false
+            )
             SettingsDivider()
-            SettingsRow(DocumentIcon, "이용약관", "", Color(0xFF252C35), TextSecondary)
+            SettingsRow(
+                painterResource(R.drawable.note),
+                "이용약관",
+                "",
+                Color(0xFF252C35),
+                TextSecondary,
+                showIconBackground = false
+            )
             SettingsDivider()
-            SettingsRow(InfoIcon, "앱 버전", BuildConfig.VERSION_NAME, Color(0xFF252C35), TextSecondary)
+            SettingsRow(
+                painterResource(R.drawable.info),
+                "앱 버전",
+                BuildConfig.VERSION_NAME,
+                Color(0xFF252C35),
+                TextSecondary,
+                showIconBackground = false
+            )
         }
         Spacer(modifier = Modifier.height(32.dp))
         Text(
