@@ -65,7 +65,6 @@ class PublicDataCameraApiClient(
         connection.requestMethod = "GET"
         connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
         connection.readTimeout = READ_TIMEOUT_MILLIS
-        Log.d(TAG, "Request: $baseUrl?${query.maskServiceKey()}")
 
         return try {
             val responseCode = connection.responseCode
@@ -76,7 +75,6 @@ class PublicDataCameraApiClient(
             }
 
             stream.bufferedReader().use { it.readText() }.also {
-                Log.d(TAG, "Response: code=$responseCode, bytes=${it.length}, preview=${it.preview()}")
                 if (responseCode !in 200..299) {
                     throw IOException("HTTP $responseCode: $it")
                 }
@@ -94,12 +92,6 @@ class PublicDataCameraApiClient(
         fun encodedValue(): String =
             if (encodeValue) URLEncoder.encode(value, Charsets.UTF_8.name()) else value
     }
-
-    private fun String.urlEncode(): String =
-        URLEncoder.encode(this, Charsets.UTF_8.name())
-
-    private fun String.maskServiceKey(): String =
-        replace(Regex("serviceKey=[^&]+"), "serviceKey=***")
 
     private fun String.preview(maxLength: Int = 240): String =
         replace("\n", "").take(maxLength)

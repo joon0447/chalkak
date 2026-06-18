@@ -12,7 +12,7 @@ data class MainUiState(
     val isSpeedTracking: Boolean = false,
     val locationPermissionSubtitle: String = "설정 필요",
     val cameraDataSubtitle: String = "업데이트 필요",
-    val gpsAccuracySubtitle: String = "높은 정확도 모드",
+    val isCameraDataUpdating: Boolean = false,
     val autoDrivingDetectionSubtitle: String = "꺼짐",
     val isAutoDrivingDetectionEnabled: Boolean = false,
     val recordRetentionSubtitle: String = "최근 90일",

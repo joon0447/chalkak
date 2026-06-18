@@ -17,7 +17,8 @@ class SpeedCameraRepository(
         provinceName: String? = null,
         cityName: String? = null,
         pageSize: Int = 1000,
-        maxPages: Int = DEFAULT_MAX_PAGES
+        maxPages: Int = DEFAULT_MAX_PAGES,
+        onProgress: suspend (loadedCount: Int) -> Unit = {}
     ): CameraRefreshResult {
         val cameras = mutableListOf<SpeedCamera>()
 
@@ -29,6 +30,7 @@ class SpeedCameraRepository(
                 cityName = cityName
             )
             cameras += pageItems
+            onProgress(cameras.size)
 
             if (pageItems.size < pageSize) {
                 break

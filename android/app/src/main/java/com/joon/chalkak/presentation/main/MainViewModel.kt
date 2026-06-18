@@ -51,13 +51,22 @@ class MainViewModel : ViewModel() {
         uiState = uiState.copy(cameraDataSubtitle = subtitle)
     }
 
-    fun toggleGpsAccuracyMode() {
-        val nextSubtitle = if (uiState.gpsAccuracySubtitle == "높은 정확도 모드") {
-            "배터리 절약 모드"
-        } else {
-            "높은 정확도 모드"
-        }
-        uiState = uiState.copy(gpsAccuracySubtitle = nextSubtitle)
+    fun startCameraDataUpdate() {
+        uiState = uiState.copy(
+            isCameraDataUpdating = true,
+            cameraDataSubtitle = "카메라 데이터 0개 불러옴..."
+        )
+    }
+
+    fun updateCameraDataProgress(loadedCount: Int) {
+        uiState = uiState.copy(cameraDataSubtitle = "카메라 데이터 ${loadedCount}개 불러옴...")
+    }
+
+    fun finishCameraDataUpdate(subtitle: String) {
+        uiState = uiState.copy(
+            isCameraDataUpdating = false,
+            cameraDataSubtitle = subtitle
+        )
     }
 
     fun updateAutoDrivingDetectionEnabled(enabled: Boolean) {

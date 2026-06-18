@@ -33,7 +33,6 @@ fun MainScreen(
     onDrivingActionClick: () -> Unit,
     onLocationPermissionClick: () -> Unit,
     onCameraDataUpdateClick: () -> Unit,
-    onGpsAccuracyClick: () -> Unit,
     onAutoDrivingDetectionClick: () -> Unit,
     onClearRecordsClick: () -> Unit
 ) {
@@ -97,7 +96,6 @@ fun MainScreen(
                             uiState = uiState,
                             onLocationPermissionClick = onLocationPermissionClick,
                             onCameraDataUpdateClick = onCameraDataUpdateClick,
-                            onGpsAccuracyClick = onGpsAccuracyClick,
                             onClearRecordsClick = onClearRecordsClick
                         )
                     }
@@ -136,7 +134,6 @@ private fun MainScreenPreview() {
             onDrivingActionClick = {},
             onLocationPermissionClick = {},
             onCameraDataUpdateClick = {},
-            onGpsAccuracyClick = {},
             onAutoDrivingDetectionClick = {},
             onClearRecordsClick = {}
         )

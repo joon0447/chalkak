@@ -13,7 +13,6 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.lifecycle.lifecycleScope
-import com.joon.chalkak.BuildConfig
 import com.joon.chalkak.data.camera.local.SpeedCameraDatabaseHelper
 import com.joon.chalkak.data.camera.local.SpeedCameraLocalDataSource
 import com.joon.chalkak.data.camera.remote.PublicDataCameraApiClient
@@ -57,6 +56,7 @@ class MainActivity : ComponentActivity() {
     }
     private val cameraPassDetector = CameraPassDetector()
     private var speedTrackingJob: Job? = null
+    private var cameraRefreshJob: Job? = null
     private var currentSession: DriveSession? = null
     private var startTrackingAfterPermissionRequest: Boolean = false
     private var startAutoDetectionAfterPermissionRequest: Boolean = false
@@ -91,7 +91,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        logCameraApiSmokeCheck()
         loadDriveRecords()
         refreshCameraCacheIfNeeded()
         updateLocationPermissionUi()
@@ -102,7 +101,6 @@ class MainActivity : ComponentActivity() {
                     onDrivingActionClick = ::toggleSpeedTracking,
                     onLocationPermissionClick = ::requestLocationPermissionFromSettings,
                     onCameraDataUpdateClick = ::refreshCameraCacheManually,
-                    onGpsAccuracyClick = viewModel::toggleGpsAccuracyMode,
                     onAutoDrivingDetectionClick = ::toggleAutoDrivingDetection,
                     onClearRecordsClick = ::clearDriveRecords
                 )
@@ -150,7 +148,7 @@ class MainActivity : ComponentActivity() {
 
         viewModel.setSpeedTracking(true)
         speedTrackingJob = lifecycleScope.launch {
-            locationSpeedTracker.speedSamples(highAccuracy = viewModel.uiState.gpsAccuracySubtitle == "높은 정확도 모드")
+            locationSpeedTracker.speedSamples(highAccuracy = true)
                 .catch { throwable ->
                     Log.e(SPEED_TAG, "Speed tracking failed: ${throwable.message}", throwable)
                     viewModel.stopSpeedTracking()
@@ -323,7 +321,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshCameraCacheIfNeeded() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        if (cameraRefreshJob?.isActive == true) return
+
+        cameraRefreshJob = lifecycleScope.launch(Dispatchers.IO) {
             cameraRepository.getLastSyncedAtMillis()?.let { lastSyncedAtMillis ->
                 withContext(Dispatchers.Main) {
                     viewModel.updateCameraDataSubtitle(
@@ -353,19 +353,28 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshCameraCacheManually() {
-        viewModel.updateCameraDataSubtitle("업데이트 중...")
-        lifecycleScope.launch(Dispatchers.IO) {
+        if (cameraRefreshJob?.isActive == true || viewModel.uiState.isCameraDataUpdating) return
+
+        viewModel.startCameraDataUpdate()
+        cameraRefreshJob = lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
-                val result = cameraRepository.refreshCameras(maxPages = MANUAL_CAMERA_CACHE_MAX_PAGES)
+                val result = cameraRepository.refreshCameras(
+                    maxPages = MANUAL_CAMERA_CACHE_MAX_PAGES,
+                    onProgress = { loadedCount ->
+                        withContext(Dispatchers.Main) {
+                            viewModel.updateCameraDataProgress(loadedCount)
+                        }
+                    }
+                )
                 withContext(Dispatchers.Main) {
-                    viewModel.updateCameraDataSubtitle(
+                    viewModel.finishCameraDataUpdate(
                         "최근 업데이트: ${System.currentTimeMillis().toSettingsTimeText()} · ${result.savedCount}건"
                     )
                 }
             }.onFailure { throwable ->
                 Log.e(TAG, "Manual camera cache refresh failed: ${throwable.message}", throwable)
                 withContext(Dispatchers.Main) {
-                    viewModel.updateCameraDataSubtitle("업데이트 실패")
+                    viewModel.finishCameraDataUpdate("업데이트 실패")
                 }
             }
         }
@@ -403,26 +412,6 @@ class MainActivity : ComponentActivity() {
             any { it.judgement.result == SpeedJudgementResult.SAFE } -> DrivingStatus.SAFE
             else -> DrivingStatus.UNKNOWN
         }
-
-    private fun logCameraApiSmokeCheck() {
-        if (!BuildConfig.DEBUG) return
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
-                Log.d(TAG, "Smoke check started.")
-                val cameras = PublicDataCameraApiClient().fetchCameras(
-                    pageNo = 1,
-                    numOfRows = 5
-                )
-                Log.d(
-                    TAG,
-                    "Smoke check success: count=${cameras.size}, first=${cameras.firstOrNull()?.id}"
-                )
-            }.onFailure { throwable ->
-                Log.e(TAG, "Smoke check failed: ${throwable.message}", throwable)
-            }
-        }
-    }
 
     private companion object {
         const val TAG = "CameraApi"

@@ -97,12 +97,13 @@ fun SettingsRow(
     iconBackground: Color,
     iconColor: Color,
     titleColor: Color = TextPrimary,
+    enabled: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -114,6 +115,55 @@ fun SettingsRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = titleColor,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            if (subtitle.isNotBlank()) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(text = subtitle, color = TextMuted, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Icon(
+            imageVector = ChevronRightIcon,
+            contentDescription = null,
+            tint = TextMuted,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+fun SettingsRow(
+    icon: Painter,
+    title: String,
+    subtitle: String,
+    iconBackground: Color,
+    iconColor: Color,
+    titleColor: Color = TextPrimary,
+    enabled: Boolean = true,
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(iconBackground),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(painter = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

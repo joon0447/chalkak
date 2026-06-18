@@ -13,17 +13,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.joon.chalkak.BuildConfig
+import com.joon.chalkak.R
 import com.joon.chalkak.presentation.common.AccentBlue
-import com.joon.chalkak.presentation.common.ArchiveIcon
-import com.joon.chalkak.presentation.common.CameraIcon
 import com.joon.chalkak.presentation.common.DocumentIcon
-import com.joon.chalkak.presentation.common.GpsIcon
 import com.joon.chalkak.presentation.common.InfoIcon
-import com.joon.chalkak.presentation.common.PinIcon
 import com.joon.chalkak.presentation.common.SectionLabel
 import com.joon.chalkak.presentation.common.SettingsDivider
 import com.joon.chalkak.presentation.common.SettingsGroup
@@ -33,7 +31,6 @@ import com.joon.chalkak.presentation.common.TextMuted
 import com.joon.chalkak.presentation.common.TextPrimary
 import com.joon.chalkak.presentation.common.TextSecondary
 import com.joon.chalkak.presentation.common.TrashIcon
-import com.joon.chalkak.presentation.common.WarningAmber
 import com.joon.chalkak.presentation.main.MainUiState
 
 @Composable
@@ -41,7 +38,6 @@ fun SettingsScreen(
     uiState: MainUiState,
     onLocationPermissionClick: () -> Unit,
     onCameraDataUpdateClick: () -> Unit,
-    onGpsAccuracyClick: () -> Unit,
     onClearRecordsClick: () -> Unit
 ) {
     Column(
@@ -60,7 +56,7 @@ fun SettingsScreen(
         SectionLabel("위치 및 데이터")
         SettingsGroup {
             SettingsRow(
-                PinIcon,
+                painterResource(R.drawable.gps),
                 "위치 권한",
                 uiState.locationPermissionSubtitle,
                 Color(0xFF123E8C),
@@ -69,27 +65,18 @@ fun SettingsScreen(
             )
             SettingsDivider()
             SettingsRow(
-                CameraIcon,
+                painterResource(R.drawable.camera),
                 "카메라 데이터",
                 uiState.cameraDataSubtitle,
                 Color(0xFF0D4422),
                 com.joon.chalkak.presentation.common.SafeGreen,
+                enabled = !uiState.isCameraDataUpdating,
                 onClick = onCameraDataUpdateClick
-            )
-            SettingsDivider()
-            SettingsRow(
-                GpsIcon,
-                "GPS 정확도 설정",
-                uiState.gpsAccuracySubtitle,
-                Color(0xFF4B3605),
-                WarningAmber,
-                onClick = onGpsAccuracyClick
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
         SectionLabel("기록")
         SettingsGroup {
-            SettingsDivider()
             SettingsRow(
                 icon = TrashIcon,
                 title = "모든 기록 삭제",
