@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.database.Cursor
 import com.joon.chalkak.domain.CameraPassRecord
 import com.joon.chalkak.domain.DriveSession
+import com.joon.chalkak.domain.DriveSessionSource
 import com.joon.chalkak.domain.DrivingStatus
 import com.joon.chalkak.domain.EnforcementType
 import com.joon.chalkak.domain.SpeedCamera
@@ -30,6 +31,7 @@ class DriveRecordLocalDataSource(
                 put("id", session.id)
                 put("started_at_millis", session.startedAtMillis)
                 put("ended_at_millis", session.endedAtMillis)
+                put("source", session.source.name)
             },
             android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE
         )
@@ -93,10 +95,10 @@ class DriveRecordLocalDataSource(
     }
 
     fun getDriveRecordGroups(): List<DriveRecordGroup> {
-        val passRecordsBySession = queryPassRecords(orderBy = "passed_at_millis ASC")
-            .groupBy { it.sessionId }
+        val passRecords = queryPassRecords(orderBy = "passed_at_millis ASC")
+        val passRecordsBySession = passRecords.groupBy { it.sessionId }
 
-        return queryRecordableSessions()
+        return queryRecordableSessions(passRecords)
             .sortedByDescending { it.startedAtMillis }
             .map { session ->
                 val records = passRecordsBySession[session.id].orEmpty()
@@ -112,10 +114,24 @@ class DriveRecordLocalDataSource(
     }
 
     private fun queryRecordableSessions(): List<DriveSession> =
-        querySessions().filter { session ->
-            val endedAtMillis = session.endedAtMillis ?: return@filter false
-            endedAtMillis - session.startedAtMillis >= MIN_RECORDABLE_DRIVE_DURATION_MILLIS
+        queryRecordableSessions(queryPassRecords(orderBy = "passed_at_millis ASC"))
+
+    private fun queryRecordableSessions(passRecords: List<CameraPassRecord>): List<DriveSession> {
+        val passCountsBySession = passRecords.groupingBy { it.sessionId }.eachCount()
+        return querySessions().filter { session ->
+            session.isRecordable(passCount = passCountsBySession[session.id] ?: 0)
         }
+    }
+
+    private fun DriveSession.isRecordable(passCount: Int): Boolean {
+        val endedAtMillis = endedAtMillis ?: return false
+        val durationMillis = endedAtMillis - startedAtMillis
+        return when (source) {
+            DriveSessionSource.MANUAL -> durationMillis >= MIN_MANUAL_RECORDABLE_DRIVE_DURATION_MILLIS
+            DriveSessionSource.AUTO ->
+                durationMillis >= MIN_AUTO_RECORDABLE_DRIVE_DURATION_MILLIS || passCount > 0
+        }
+    }
 
     fun clear() {
         val db = databaseHelper.writableDatabase
@@ -204,7 +220,7 @@ class DriveRecordLocalDataSource(
         val db = databaseHelper.readableDatabase
         return db.query(
             DriveRecordDatabaseHelper.TABLE_DRIVE_SESSIONS,
-            arrayOf("id", "started_at_millis", "ended_at_millis"),
+            arrayOf("id", "started_at_millis", "ended_at_millis", "source"),
             null,
             null,
             null,
@@ -217,7 +233,8 @@ class DriveRecordLocalDataSource(
                         DriveSession(
                             id = cursor.getString(0),
                             startedAtMillis = cursor.getLong(1),
-                            endedAtMillis = if (cursor.isNull(2)) null else cursor.getLong(2)
+                            endedAtMillis = if (cursor.isNull(2)) null else cursor.getLong(2),
+                            source = cursor.getString(3).toDriveSessionSource()
                         )
                     )
                 }
@@ -313,6 +330,9 @@ class DriveRecordLocalDataSource(
         return if (isNull(index)) null else getDouble(index)
     }
 
+    private fun String?.toDriveSessionSource(): DriveSessionSource =
+        enumValues<DriveSessionSource>().firstOrNull { it.name == this } ?: DriveSessionSource.MANUAL
+
     private fun Long.toTimeText(): String =
         TIME_FORMATTER.format(Instant.ofEpochMilli(this).atZone(SEOUL_ZONE))
 
@@ -323,7 +343,8 @@ class DriveRecordLocalDataSource(
         val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.KOREAN)
         val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)
-        const val MIN_RECORDABLE_DRIVE_DURATION_MILLIS = 5 * 60 * 1000L
+        const val MIN_MANUAL_RECORDABLE_DRIVE_DURATION_MILLIS = 5 * 60 * 1000L
+        const val MIN_AUTO_RECORDABLE_DRIVE_DURATION_MILLIS = 60 * 1000L
         val PASS_COLUMNS = arrayOf(
             "id",
             "session_id",

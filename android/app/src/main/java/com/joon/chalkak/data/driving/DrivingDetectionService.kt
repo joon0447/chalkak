@@ -21,6 +21,7 @@ import com.joon.chalkak.data.drive.local.DriveRecordLocalDataSource
 import com.joon.chalkak.data.location.AndroidLocationSpeedTracker
 import com.joon.chalkak.domain.CameraPassRecord
 import com.joon.chalkak.domain.DriveSession
+import com.joon.chalkak.domain.DriveSessionSource
 import com.joon.chalkak.domain.LocationSpeedSample
 import com.joon.chalkak.domain.NearbySpeedCamera
 import com.joon.chalkak.domain.SpeedJudgementResult
@@ -137,7 +138,8 @@ class DrivingDetectionService : Service() {
         locationJob?.cancel()
         val session = DriveSession(
             id = UUID.randomUUID().toString(),
-            startedAtMillis = System.currentTimeMillis()
+            startedAtMillis = System.currentTimeMillis(),
+            source = DriveSessionSource.AUTO
         )
         currentSession = session
         cameraPassDetector.reset()
