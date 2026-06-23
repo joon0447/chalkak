@@ -69,6 +69,10 @@ class MainViewModel : ViewModel() {
         )
     }
 
+    fun updatePrimaryDrivingRegionSubtitle(subtitle: String) {
+        uiState = uiState.copy(primaryDrivingRegionSubtitle = subtitle)
+    }
+
     fun updateAutoDrivingDetectionEnabled(enabled: Boolean) {
         uiState = uiState.copy(
             isAutoDrivingDetectionEnabled = enabled,

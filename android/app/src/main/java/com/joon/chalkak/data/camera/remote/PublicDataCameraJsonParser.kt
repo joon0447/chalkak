@@ -6,12 +6,18 @@ import org.json.JSONObject
 
 object PublicDataCameraJsonParser {
     fun parse(json: String): List<PublicDataCameraDto> {
+        return parsePage(json).items
+    }
+
+    fun parsePage(json: String): PublicDataCameraPageDto {
         val root = JSONObject(json)
         root.logResultHeader()
-        val items = root.findItemsArray() ?: return emptyList()
+        val items = root.findItemsArray()
 
-        return buildList {
-            for (index in 0 until items.length()) {
+        return PublicDataCameraPageDto(
+            items = buildList {
+                if (items == null) return@buildList
+                for (index in 0 until items.length()) {
                 val item = items.optJSONObject(index) ?: continue
                 val manageNo = item.optNullableString("mnlssRegltCameraManageNo") ?: continue
                 add(
@@ -40,8 +46,10 @@ object PublicDataCameraJsonParser {
                         institutionCode = item.optNullableString("instt_code")
                     )
                 )
-            }
-        }
+                }
+            },
+            totalCount = root.findTotalCount()
+        )
     }
 
     private fun JSONObject.findItemsArray(): JSONArray? {
@@ -54,6 +62,12 @@ object PublicDataCameraJsonParser {
             is JSONObject -> nestedItems.optJSONArray("item")
             else -> optJSONArray("items")
         }
+    }
+
+    private fun JSONObject.findTotalCount(): Int? {
+        val response = optJSONObject("response")
+        val body = response?.optJSONObject("body")
+        return body?.optNullableInt("totalCount") ?: optNullableInt("totalCount")
     }
 
     private fun JSONObject.optNullableString(name: String): String? =

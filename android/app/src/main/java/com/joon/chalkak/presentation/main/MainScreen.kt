@@ -24,6 +24,8 @@ import com.joon.chalkak.presentation.common.BottomNavigationBar
 import com.joon.chalkak.presentation.history.HistoryScreen
 import com.joon.chalkak.presentation.detail.HistoryDetailScreen
 import com.joon.chalkak.presentation.home.HomeScreen
+import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingScreen
+import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingState
 import com.joon.chalkak.presentation.settings.SettingsScreen
 import com.joon.chalkak.ui.theme.ChalkakTheme
 
@@ -32,7 +34,11 @@ fun MainScreen(
     uiState: MainUiState,
     onDrivingActionClick: () -> Unit,
     onLocationPermissionClick: () -> Unit,
-    onCameraDataUpdateClick: () -> Unit,
+    regionSelectionState: DrivingRegionOnboardingState,
+    onPrepareRegionSelection: () -> Unit,
+    onRegionProvinceToggle: (String) -> Unit,
+    onAllRegionProvinceToggle: () -> Unit,
+    onRegionSelectionSubmit: (onComplete: () -> Unit) -> Unit,
     onAutoDrivingDetectionClick: () -> Unit,
     onClearRecordsClick: () -> Unit
 ) {
@@ -95,8 +101,29 @@ fun MainScreen(
                         SettingsScreen(
                             uiState = uiState,
                             onLocationPermissionClick = onLocationPermissionClick,
-                            onCameraDataUpdateClick = onCameraDataUpdateClick,
+                            onDrivingRegionClick = {
+                                onPrepareRegionSelection()
+                                navController.navigate(REGION_SELECTION_ROUTE)
+                            },
                             onClearRecordsClick = onClearRecordsClick
+                        )
+                    }
+                    composable(REGION_SELECTION_ROUTE) {
+                        DrivingRegionOnboardingScreen(
+                            state = regionSelectionState,
+                            title = "주 운전 지역",
+                            subtitle = "선택한 시/도 카메라 데이터를 다운로드하거나 최신 데이터로 업데이트합니다.",
+                            actionText = "다운로드/업데이트",
+                            topBarTitle = "데이터 관리",
+                            applyStatusBarsPadding = false,
+                            onBackClick = { navController.popBackStack() },
+                            onProvinceToggle = onRegionProvinceToggle,
+                            onAllProvinceToggle = onAllRegionProvinceToggle,
+                            onSubmit = {
+                                onRegionSelectionSubmit {
+                                    navController.popBackStack()
+                                }
+                            }
                         )
                     }
                 }
@@ -122,6 +149,7 @@ fun MainScreen(
 
 private const val HISTORY_RECORD_ID_ARGUMENT = "recordId"
 private const val HISTORY_DETAIL_ROUTE = "history/{$HISTORY_RECORD_ID_ARGUMENT}"
+private const val REGION_SELECTION_ROUTE = "settings/regions"
 
 private fun historyDetailRoute(recordId: String): String = "history/$recordId"
 
@@ -133,7 +161,11 @@ private fun MainScreenPreview() {
             uiState = MainUiState(),
             onDrivingActionClick = {},
             onLocationPermissionClick = {},
-            onCameraDataUpdateClick = {},
+            regionSelectionState = DrivingRegionOnboardingState(),
+            onPrepareRegionSelection = {},
+            onRegionProvinceToggle = {},
+            onAllRegionProvinceToggle = {},
+            onRegionSelectionSubmit = { onComplete -> onComplete() },
             onAutoDrivingDetectionClick = {},
             onClearRecordsClick = {}
         )

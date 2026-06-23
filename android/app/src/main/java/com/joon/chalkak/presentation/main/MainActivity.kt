@@ -3,6 +3,7 @@ package com.joon.chalkak.presentation.main
 import android.Manifest
 import android.content.Intent
 import android.graphics.Color
+import android.location.Geocoder
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -12,6 +13,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.lifecycle.lifecycleScope
@@ -23,19 +27,27 @@ import com.joon.chalkak.data.driving.DrivingDetectionService
 import com.joon.chalkak.data.drive.local.DriveRecordDatabaseHelper
 import com.joon.chalkak.data.drive.local.DriveRecordLocalDataSource
 import com.joon.chalkak.data.location.AndroidLocationSpeedTracker
+import com.joon.chalkak.data.settings.DrivingRegion
+import com.joon.chalkak.data.settings.DrivingRegionPreferences
 import com.joon.chalkak.domain.CameraPassRecord
 import com.joon.chalkak.domain.DriveSession
 import com.joon.chalkak.domain.DrivingStatus
+import com.joon.chalkak.domain.GeoLocation
 import com.joon.chalkak.domain.LocationSpeedSample
 import com.joon.chalkak.domain.NearbySpeedCamera
 import com.joon.chalkak.domain.SpeedJudgementResult
 import com.joon.chalkak.domain.driving.CameraPassDetector
 import com.joon.chalkak.domain.filterForwardCorridor
 import com.joon.chalkak.model.NearbyCamera
+import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingScreen
+import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingState
+import com.joon.chalkak.presentation.onboarding.DrivingProvinceNames
 import com.joon.chalkak.ui.theme.ChalkakTheme
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -46,6 +58,7 @@ import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
+    private val drivingRegionPreferences by lazy { DrivingRegionPreferences(this) }
     private val locationSpeedTracker by lazy { AndroidLocationSpeedTracker(this) }
     private val cameraRepository by lazy {
         SpeedCameraRepository(
@@ -62,6 +75,8 @@ class MainActivity : ComponentActivity() {
     private var currentSession: DriveSession? = null
     private var startTrackingAfterPermissionRequest: Boolean = false
     private var startAutoDetectionAfterPermissionRequest: Boolean = false
+    private var showOnboarding by mutableStateOf(false)
+    private var onboardingState by mutableStateOf(DrivingRegionOnboardingState())
 
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -96,27 +111,266 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
+        val primaryRegions = drivingRegionPreferences.getPrimaryRegions()
+        showOnboarding = primaryRegions.isEmpty()
+        updatePrimaryRegionUi(primaryRegions)
         loadDriveRecords()
-        refreshCameraCacheIfNeeded()
+        updateCameraCacheUi()
         updateLocationPermissionUi()
         setContent {
             ChalkakTheme {
-                MainScreen(
-                    uiState = viewModel.uiState,
-                    onDrivingActionClick = ::toggleSpeedTracking,
-                    onLocationPermissionClick = ::requestLocationPermissionFromSettings,
-                    onCameraDataUpdateClick = ::refreshCameraCacheManually,
-                    onAutoDrivingDetectionClick = ::toggleAutoDrivingDetection,
-                    onClearRecordsClick = ::clearDriveRecords
-                )
+                if (showOnboarding) {
+                    DrivingRegionOnboardingScreen(
+                        state = onboardingState,
+                        onProvinceToggle = ::toggleOnboardingProvince,
+                        onAllProvinceToggle = ::toggleAllOnboardingProvinces,
+                        onSubmit = { downloadSelectedRegions(enterAppAfterDownload = true) }
+                    )
+                } else {
+                    MainScreen(
+                        uiState = viewModel.uiState,
+                        onDrivingActionClick = ::toggleSpeedTracking,
+                        onLocationPermissionClick = ::requestLocationPermissionFromSettings,
+                        regionSelectionState = onboardingState,
+                        onPrepareRegionSelection = ::prepareRegionSelection,
+                        onRegionProvinceToggle = ::toggleOnboardingProvince,
+                        onAllRegionProvinceToggle = ::toggleAllOnboardingProvinces,
+                        onRegionSelectionSubmit = { onComplete ->
+                            downloadSelectedRegions(
+                                enterAppAfterDownload = false,
+                                onComplete = onComplete
+                            )
+                        },
+                        onAutoDrivingDetectionClick = ::toggleAutoDrivingDetection,
+                        onClearRecordsClick = ::clearDriveRecords
+                    )
+                }
             }
+        }
+        if (primaryRegions.isNotEmpty()) {
+            refreshPrimaryRegionsIfNeeded(primaryRegions)
+            prefetchCurrentRegionIfPossible()
         }
     }
 
     override fun onResume() {
         super.onResume()
         loadDriveRecords()
+        updateCameraCacheUi()
     }
+
+    private fun toggleOnboardingProvince(province: String) {
+        if (onboardingState.isDownloading) return
+
+        val selected = onboardingState.selectedProvinces
+        val nextSelected = when {
+            province in selected -> selected - province
+            else -> selected + province
+        }
+        onboardingState = onboardingState.copy(
+            selectedProvinces = nextSelected,
+            errorText = null
+        )
+    }
+
+    private fun toggleAllOnboardingProvinces() {
+        if (onboardingState.isDownloading) return
+
+        val allSelected = onboardingState.selectedProvinces.containsAll(DrivingProvinceNames)
+        onboardingState = onboardingState.copy(
+            selectedProvinces = if (allSelected) emptyList() else DrivingProvinceNames,
+            errorText = null
+        )
+    }
+
+    private fun prepareRegionSelection() {
+        onboardingState = DrivingRegionOnboardingState(
+            selectedProvinces = drivingRegionPreferences.getPrimaryRegions()
+                .map { it.provinceName }
+                .filter { it in DrivingProvinceNames }
+        )
+    }
+
+    private fun downloadSelectedRegions(
+        enterAppAfterDownload: Boolean,
+        onComplete: () -> Unit = {}
+    ) {
+        if (!onboardingState.canSubmit) return
+
+        val regions = onboardingState.selectedProvinces.map { province ->
+            DrivingRegion(provinceName = province)
+        }
+        onboardingState = onboardingState.copy(
+            isDownloading = true,
+            progressText = "선택 지역 데이터 준비 중...",
+            errorText = null
+        )
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                var totalSavedCount = 0
+                var latestReferenceDate: String? = null
+                regions.forEachIndexed { index, region ->
+                    val result = cameraRepository.refreshRegionCameras(
+                        provinceName = region.provinceName,
+                        onProgress = { loadedCount, totalCount ->
+                            withContext(Dispatchers.Main) {
+                                onboardingState = onboardingState.copy(
+                                    progressText = totalCount?.let { total ->
+                                        "${index + 1}/${regions.size} ${region.provinceName} ${loadedCount}/${total}건"
+                                    } ?: "${index + 1}/${regions.size} ${region.provinceName} ${loadedCount}건"
+                                )
+                            }
+                        }
+                    )
+                    totalSavedCount += result.savedCount
+                    latestReferenceDate = listOfNotNull(latestReferenceDate, result.referenceDate).maxOrNull()
+                }
+                CameraRegionDownloadSummary(
+                    savedCount = totalSavedCount,
+                    referenceDate = latestReferenceDate
+                )
+            }.onSuccess { result ->
+                drivingRegionPreferences.savePrimaryRegions(regions)
+                withContext(Dispatchers.Main) {
+                    updatePrimaryRegionUi(regions)
+                    updateCameraCacheUi(
+                        "지역 데이터 준비 완료 · ${result.savedCount}건" +
+                            (result.referenceDate?.let { " · 기준일 $it" } ?: "")
+                    )
+                    if (enterAppAfterDownload) {
+                        showOnboarding = false
+                    }
+                    onboardingState = onboardingState.copy(isDownloading = false)
+                    onComplete()
+                }
+                prefetchCurrentRegionIfPossible()
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+                Log.e(TAG, "Primary region refresh failed: ${throwable.message}", throwable)
+                withContext(Dispatchers.Main) {
+                    onboardingState = onboardingState.copy(
+                        isDownloading = false,
+                        progressText = "",
+                        errorText = "데이터를 불러오지 못했습니다. 지역명과 네트워크를 확인해주세요."
+                    )
+                }
+            }
+        }
+    }
+
+    private fun refreshPrimaryRegionsIfNeeded(regions: List<DrivingRegion>) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            regions.forEach { region ->
+                val metadata = cameraRepository.getRegionSyncMetadata(region.provinceName)
+                if (metadata != null && !metadata.syncedAtMillis.isStale()) return@forEach
+
+                runCatching {
+                    cameraRepository.refreshRegionCameras(provinceName = region.provinceName)
+                }.onFailure { throwable ->
+                    if (throwable is CancellationException) throw throwable
+                    Log.e(TAG, "Silent primary region refresh failed: ${throwable.message}", throwable)
+                }
+            }
+            withContext(Dispatchers.Main) {
+                updateCameraCacheUi()
+            }
+        }
+    }
+
+    private fun prefetchCurrentRegionIfPossible() {
+        if (!hasLocationPermission()) return
+
+        lifecycleScope.launch {
+            runCatching {
+                val sample = locationSpeedTracker.speedSamples(highAccuracy = false).first()
+                withContext(Dispatchers.IO) {
+                    sample.location.toDrivingRegionOrNull()
+                }
+            }.onSuccess { region ->
+                if (region == null) return@onSuccess
+                val hasProvinceCache = cameraRepository.hasRegionCache(region.provinceName)
+                val hasCityCache = region.cityName?.let { city ->
+                    cameraRepository.hasRegionCache(region.provinceName, city)
+                } ?: false
+                if (hasProvinceCache || hasCityCache) return@onSuccess
+
+                launch(Dispatchers.IO) {
+                    runCatching {
+                        cameraRepository.refreshRegionCameras(
+                            provinceName = region.provinceName,
+                            cityName = region.cityName
+                        )
+                    }.onSuccess {
+                        withContext(Dispatchers.Main) {
+                            updateCameraCacheUi()
+                        }
+                    }.onFailure { throwable ->
+                        if (throwable is CancellationException) throw throwable
+                        Log.e(TAG, "Current region prefetch failed: ${throwable.message}", throwable)
+                    }
+                }
+            }.onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+                Log.e(TAG, "Current region lookup failed: ${throwable.message}", throwable)
+            }
+        }
+    }
+
+    private fun updatePrimaryRegionUi(regions: List<DrivingRegion>) {
+        viewModel.updatePrimaryDrivingRegionSubtitle(
+            regions.takeIf { it.isNotEmpty() }
+                ?.joinToString(", ") { it.provinceName }
+                ?: "첫 실행에서 설정 필요"
+        )
+    }
+
+    private fun updateCameraCacheUi(subtitleOverride: String? = null) {
+        if (subtitleOverride != null) {
+            viewModel.updateCameraDataSubtitle(subtitleOverride)
+            return
+        }
+
+        val cachedCount = cameraRepository.getCachedCameraCount()
+        val lastSyncedAtMillis = cameraRepository.getLastSyncedAtMillis()
+        val subtitle = when {
+            cachedCount <= 0 -> "지역 데이터 필요"
+            lastSyncedAtMillis != null ->
+                "로컬 ${cachedCount}건 · 전국 기준 ${lastSyncedAtMillis.toSettingsTimeText()}"
+            else -> "로컬 ${cachedCount}건"
+        }
+        viewModel.updateCameraDataSubtitle(subtitle)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun GeoLocation.toDrivingRegionOrNull(): DrivingRegion? {
+        val addresses = Geocoder(this@MainActivity, Locale.KOREAN).getFromLocation(
+            latitude,
+            longitude,
+            1
+        ).orEmpty()
+        val address = addresses.firstOrNull() ?: return null
+        val province = address.adminArea?.takeIf { it.isNotBlank() } ?: return null
+        val city = listOf(
+            address.subAdminArea,
+            address.locality?.takeIf { it != province },
+            address.subLocality
+        ).firstOrNull { value ->
+            value != null && value.isNotBlank() && value != province
+        } ?: return null
+
+        return DrivingRegion(
+            provinceName = province.trim(),
+            cityName = city.trim()
+        )
+    }
+
+    private fun Long.isStale(): Boolean =
+        System.currentTimeMillis() - this >= REGION_REFRESH_INTERVAL_MILLIS
+
+    private data class CameraRegionDownloadSummary(
+        val savedCount: Int,
+        val referenceDate: String?
+    )
 
     private fun toggleSpeedTracking() {
         if (viewModel.uiState.isSpeedTracking) {
@@ -340,7 +594,7 @@ class MainActivity : ComponentActivity() {
 
             runCatching {
                 Log.d(TAG, "Camera cache refresh started.")
-                val result = cameraRepository.refreshCameras(maxPages = INITIAL_CAMERA_CACHE_MAX_PAGES)
+                val result = cameraRepository.refreshCameras(maxPages = NATIONWIDE_CAMERA_CACHE_MAX_PAGES)
                 withContext(Dispatchers.Main) {
                     viewModel.updateCameraDataSubtitle(
                         "최근 업데이트: ${(result.lastSyncedAtMillis ?: System.currentTimeMillis()).toSettingsTimeText()} · ${result.savedCount}건"
@@ -364,7 +618,7 @@ class MainActivity : ComponentActivity() {
         cameraRefreshJob = lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
                 val result = cameraRepository.refreshCameras(
-                    maxPages = MANUAL_CAMERA_CACHE_MAX_PAGES,
+                    maxPages = NATIONWIDE_CAMERA_CACHE_MAX_PAGES,
                     onProgress = { loadedCount ->
                         withContext(Dispatchers.Main) {
                             viewModel.updateCameraDataProgress(loadedCount)
@@ -373,7 +627,8 @@ class MainActivity : ComponentActivity() {
                 )
                 withContext(Dispatchers.Main) {
                     viewModel.finishCameraDataUpdate(
-                        "최근 업데이트: ${System.currentTimeMillis().toSettingsTimeText()} · ${result.savedCount}건"
+                        "전국 데이터 완료 · ${result.savedCount}건" +
+                            (result.referenceDate?.let { " · 기준일 $it" } ?: "")
                     )
                 }
             }.onFailure { throwable ->
@@ -424,10 +679,10 @@ class MainActivity : ComponentActivity() {
         const val CAMERA_SEARCH_RADIUS_METERS = 1_000.0
         const val MAX_NEARBY_CAMERA_CANDIDATES = 50
         const val MAX_FORWARD_CAMERA_RESULTS = 10
-        const val INITIAL_CAMERA_CACHE_MAX_PAGES = 5
-        const val MANUAL_CAMERA_CACHE_MAX_PAGES = 10
+        const val NATIONWIDE_CAMERA_CACHE_MAX_PAGES = 60
         const val RECORD_RETENTION_DAYS = 90L
         const val MILLIS_PER_DAY = 24L * 60L * 60L * 1000L
+        const val REGION_REFRESH_INTERVAL_MILLIS = 7L * MILLIS_PER_DAY
         val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         val SETTINGS_TIME_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("M월 d일 HH:mm", Locale.KOREAN)

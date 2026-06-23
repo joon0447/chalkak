@@ -21,26 +21,72 @@ class SpeedCameraRepository(
         onProgress: suspend (loadedCount: Int) -> Unit = {}
     ): CameraRefreshResult {
         val cameras = mutableListOf<SpeedCamera>()
+        var totalCount: Int? = null
 
         for (page in 1..maxPages) {
-            val pageItems = remoteDataSource.fetchCameras(
+            val cameraPage = remoteDataSource.fetchCameraPage(
                 pageNo = page,
                 numOfRows = pageSize,
                 provinceName = provinceName,
                 cityName = cityName
             )
+            val pageItems = cameraPage.items
+            totalCount = cameraPage.totalCount ?: totalCount
             cameras += pageItems
             onProgress(cameras.size)
 
-            if (pageItems.size < pageSize) {
+            if (pageItems.size < pageSize || cameras.size >= (totalCount ?: Int.MAX_VALUE)) {
                 break
             }
         }
 
-        localDataSource.replaceAll(cameras)
+        localDataSource.replaceAll(cameras, totalCount = totalCount ?: cameras.size)
         return CameraRefreshResult(
             savedCount = cameras.size,
-            lastSyncedAtMillis = localDataSource.getLastSyncedAtMillis()
+            lastSyncedAtMillis = localDataSource.getLastSyncedAtMillis(),
+            totalCount = totalCount,
+            referenceDate = cameras.maxReferenceDate()
+        )
+    }
+
+    suspend fun refreshRegionCameras(
+        provinceName: String,
+        cityName: String? = null,
+        pageSize: Int = 1000,
+        maxPages: Int = DEFAULT_MAX_PAGES,
+        onProgress: suspend (loadedCount: Int, totalCount: Int?) -> Unit = { _, _ -> }
+    ): CameraRefreshResult {
+        val cameras = mutableListOf<SpeedCamera>()
+        var totalCount: Int? = null
+        val syncKey = regionSyncKey(provinceName, cityName)
+
+        for (page in 1..maxPages) {
+            val cameraPage = remoteDataSource.fetchCameraPage(
+                pageNo = page,
+                numOfRows = pageSize,
+                provinceName = provinceName,
+                cityName = cityName
+            )
+            val pageItems = cameraPage.items
+            totalCount = cameraPage.totalCount ?: totalCount
+            cameras += pageItems
+            onProgress(cameras.size, totalCount)
+
+            if (pageItems.size < pageSize || cameras.size >= (totalCount ?: Int.MAX_VALUE)) {
+                break
+            }
+        }
+
+        localDataSource.upsertAll(
+            cameras = cameras,
+            syncKey = syncKey,
+            totalCount = totalCount ?: cameras.size
+        )
+        return CameraRefreshResult(
+            savedCount = cameras.size,
+            lastSyncedAtMillis = localDataSource.getSyncMetadata(syncKey)?.syncedAtMillis,
+            totalCount = totalCount,
+            referenceDate = cameras.maxReferenceDate()
         )
     }
 
@@ -92,6 +138,17 @@ class SpeedCameraRepository(
     fun getLastSyncedAtMillis(): Long? =
         localDataSource.getLastSyncedAtMillis()
 
+    fun getCachedCameraCount(): Int =
+        localDataSource.getCount()
+
+    fun hasRegionCache(provinceName: String, cityName: String? = null): Boolean {
+        val metadata = localDataSource.getSyncMetadata(regionSyncKey(provinceName, cityName))
+        return metadata?.itemCount != null && metadata.itemCount > 0
+    }
+
+    fun getRegionSyncMetadata(provinceName: String, cityName: String? = null) =
+        localDataSource.getSyncMetadata(regionSyncKey(provinceName, cityName))
+
     fun clearCache() {
         localDataSource.clear()
     }
@@ -103,7 +160,16 @@ class SpeedCameraRepository(
     }
 }
 
+fun regionSyncKey(provinceName: String, cityName: String? = null): String =
+    listOfNotNull("region", provinceName.trim(), cityName?.trim()?.takeIf { it.isNotBlank() })
+        .joinToString(":")
+
 data class CameraRefreshResult(
     val savedCount: Int,
-    val lastSyncedAtMillis: Long?
+    val lastSyncedAtMillis: Long?,
+    val totalCount: Int? = null,
+    val referenceDate: String? = null
 )
+
+private fun List<SpeedCamera>.maxReferenceDate(): String? =
+    mapNotNull { it.referenceDate }.maxOrNull()

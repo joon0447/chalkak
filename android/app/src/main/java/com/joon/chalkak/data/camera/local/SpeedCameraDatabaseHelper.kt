@@ -18,14 +18,15 @@ class SpeedCameraDatabaseHelper(context: Context) : SQLiteOpenHelper(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_SPEED_CAMERAS")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_SYNC_METADATA")
-        onCreate(db)
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE $TABLE_SYNC_METADATA ADD COLUMN $COLUMN_ITEM_COUNT INTEGER")
+            db.execSQL("ALTER TABLE $TABLE_SYNC_METADATA ADD COLUMN $COLUMN_SYNC_REFERENCE_DATE TEXT")
+        }
     }
 
     companion object {
         const val DATABASE_NAME = "chalkak_camera_cache.db"
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
 
         const val TABLE_SPEED_CAMERAS = "speed_cameras"
         const val TABLE_SYNC_METADATA = "sync_metadata"
@@ -45,6 +46,8 @@ class SpeedCameraDatabaseHelper(context: Context) : SQLiteOpenHelper(
 
         const val COLUMN_SYNC_KEY = "sync_key"
         const val COLUMN_SYNCED_AT_MILLIS = "synced_at_millis"
+        const val COLUMN_ITEM_COUNT = "item_count"
+        const val COLUMN_SYNC_REFERENCE_DATE = "reference_date"
     }
 }
 
@@ -68,7 +71,9 @@ private const val CREATE_SPEED_CAMERAS_TABLE = """
 private const val CREATE_SYNC_METADATA_TABLE = """
     CREATE TABLE sync_metadata (
         sync_key TEXT PRIMARY KEY NOT NULL,
-        synced_at_millis INTEGER NOT NULL
+        synced_at_millis INTEGER NOT NULL,
+        item_count INTEGER,
+        reference_date TEXT
     )
 """
 

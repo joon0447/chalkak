@@ -13,6 +13,7 @@ data class MainUiState(
     val locationPermissionSubtitle: String = "설정 필요",
     val cameraDataSubtitle: String = "업데이트 필요",
     val isCameraDataUpdating: Boolean = false,
+    val primaryDrivingRegionSubtitle: String = "미설정",
     val autoDrivingDetectionSubtitle: String = "꺼짐",
     val isAutoDrivingDetectionEnabled: Boolean = false,
     val recordRetentionSubtitle: String = "최근 90일",

@@ -17,7 +17,20 @@ class PublicDataCameraApiClient(
         numOfRows: Int = 1000,
         provinceName: String? = null,
         cityName: String? = null
-    ): List<SpeedCamera> {
+    ): List<SpeedCamera> =
+        fetchCameraPage(
+            pageNo = pageNo,
+            numOfRows = numOfRows,
+            provinceName = provinceName,
+            cityName = cityName
+        ).items
+
+    suspend fun fetchCameraPage(
+        pageNo: Int = 1,
+        numOfRows: Int = 1000,
+        provinceName: String? = null,
+        cityName: String? = null
+    ): PublicDataCameraPage {
         require(pageNo > 0) { "pageNo must be greater than 0." }
         require(numOfRows in 1..1000) { "numOfRows must be between 1 and 1000." }
         require(serviceKey.isNotBlank()) {
@@ -32,12 +45,13 @@ class PublicDataCameraApiClient(
                 cityName = cityName
             )
         )
-        val cameras = PublicDataCameraJsonParser.parse(response).map { it.toDomain() }
+        val page = PublicDataCameraJsonParser.parsePage(response)
+        val cameras = page.items.map { it.toDomain() }
         Log.d(
             TAG,
-            "Parsed cameras: count=${cameras.size}, first=${cameras.firstOrNull()?.toLogText()}"
+            "Parsed cameras: count=${cameras.size}, total=${page.totalCount}, first=${cameras.firstOrNull()?.toLogText()}"
         )
-        return cameras
+        return PublicDataCameraPage(items = cameras, totalCount = page.totalCount)
     }
 
     private fun buildQuery(
@@ -106,3 +120,8 @@ class PublicDataCameraApiClient(
         const val READ_TIMEOUT_MILLIS = 15_000
     }
 }
+
+data class PublicDataCameraPage(
+    val items: List<SpeedCamera>,
+    val totalCount: Int?
+)

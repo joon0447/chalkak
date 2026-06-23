@@ -24,3 +24,8 @@ data class PublicDataCameraDto(
     val referenceDate: String?,
     val institutionCode: String?
 )
+
+data class PublicDataCameraPageDto(
+    val items: List<PublicDataCameraDto>,
+    val totalCount: Int?
+)

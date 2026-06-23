@@ -27,6 +27,14 @@ val HomeIcon = lineIcon("Home") {
     close()
 }
 
+val BackIcon = lineIcon("Back") {
+    moveTo(19f, 12f)
+    horizontalLineTo(6f)
+    moveTo(12f, 6f)
+    lineTo(6f, 12f)
+    lineTo(12f, 18f)
+}
+
 val HistoryIcon = lineIcon("History") {
     moveTo(5f, 7f)
     verticalLineTo(12f)
