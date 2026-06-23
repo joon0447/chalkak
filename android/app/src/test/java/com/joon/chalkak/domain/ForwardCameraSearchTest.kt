@@ -108,6 +108,46 @@ class ForwardCameraSearchTest {
         assertEquals(listOf("north"), result.map { it.camera.id })
     }
 
+    @Test
+    fun filterForwardCorridor_keepsOnlyMatchingDirectionWhenBothLanesHaveCameras() {
+        val result = listOf(
+            nearbyCamera(
+                id = "opposite-lane",
+                distanceMeters = 55.0,
+                bearingToCameraDegrees = 2.0,
+                location = "테스트 지점 남행"
+            ),
+            nearbyCamera(
+                id = "driving-lane",
+                distanceMeters = 60.0,
+                bearingToCameraDegrees = 2.0,
+                location = "테스트 지점 북행"
+            )
+        ).filterForwardCorridor(movingNorthSample())
+
+        assertEquals(listOf("driving-lane"), result.map { it.camera.id })
+    }
+
+    @Test
+    fun filterForwardCorridor_prefersMatchingDirectionHintOverUnknownSamePoint() {
+        val result = listOf(
+            nearbyCamera(
+                id = "unknown",
+                distanceMeters = 55.0,
+                bearingToCameraDegrees = 0.0,
+                location = "테스트 지점"
+            ),
+            nearbyCamera(
+                id = "north",
+                distanceMeters = 65.0,
+                bearingToCameraDegrees = 0.0,
+                location = "테스트 지점 북행"
+            )
+        ).filterForwardCorridor(movingNorthSample())
+
+        assertEquals(listOf("north"), result.map { it.camera.id })
+    }
+
     private fun movingNorthSample(
         speedKmh: Double = 40.0,
         bearingDegrees: Double? = 0.0

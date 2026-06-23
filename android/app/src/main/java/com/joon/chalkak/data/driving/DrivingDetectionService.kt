@@ -26,6 +26,7 @@ import com.joon.chalkak.domain.LocationSpeedSample
 import com.joon.chalkak.domain.NearbySpeedCamera
 import com.joon.chalkak.domain.SpeedJudgementResult
 import com.joon.chalkak.domain.driving.CameraPassDetector
+import com.joon.chalkak.domain.driving.DrivingBearingStabilizer
 import com.joon.chalkak.domain.driving.DrivingStartDetector
 import com.joon.chalkak.domain.driving.DrivingStopDetector
 import com.joon.chalkak.domain.driving.DrivingDetectionState
@@ -59,6 +60,7 @@ class DrivingDetectionService : Service() {
         DriveRecordLocalDataSource(DriveRecordDatabaseHelper(this))
     }
     private val cameraPassDetector = CameraPassDetector()
+    private val drivingBearingStabilizer = DrivingBearingStabilizer()
     private val startDetector = DrivingStartDetector(state.config)
     private val stopDetector = DrivingStopDetector(state.config)
 
@@ -121,6 +123,7 @@ class DrivingDetectionService : Service() {
         }
         currentSession = null
         cameraPassDetector.reset()
+        drivingBearingStabilizer.reset()
         startDetector.reset()
         stopDetector.reset()
         state = state.copy(
@@ -143,6 +146,7 @@ class DrivingDetectionService : Service() {
         )
         currentSession = session
         cameraPassDetector.reset()
+        drivingBearingStabilizer.reset()
         stopDetector.reset()
         state = state.copy(
             status = DrivingDetectionStatus.RECORDING_HIGH_ACCURACY,
@@ -156,14 +160,15 @@ class DrivingDetectionService : Service() {
             driveRecordDataSource.startSession(session)
         }
         locationJob = serviceScope.launch {
-            handleRecordingSample(firstSample)
+            handleRecordingSample(drivingBearingStabilizer.stabilize(firstSample))
             locationSpeedTracker.speedSamples(highAccuracy = true)
                 .catch { throwable ->
                     Log.e(TAG, "High accuracy recording failed: ${throwable.message}", throwable)
                     setErrorState(throwable.message ?: "주행 기록 실패")
                 }
                 .collect { sample ->
-                    handleRecordingSample(sample)
+                    val stabilizedSample = drivingBearingStabilizer.stabilize(sample)
+                    handleRecordingSample(stabilizedSample)
                     if (stopDetector.addSample(sample)) {
                         finishCurrentSessionAndReturnToMonitoring()
                     } else if (sample.speedKmh < state.config.stopSpeedThresholdKmh) {
@@ -208,6 +213,7 @@ class DrivingDetectionService : Service() {
         }
         currentSession = null
         cameraPassDetector.reset()
+        drivingBearingStabilizer.reset()
         Log.d(TAG, "Driving stopped. Session finished: ${session.id}")
         startLowPowerMonitoring()
     }

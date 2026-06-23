@@ -18,11 +18,11 @@ data class NearbySpeedCamera(
 
 data class ForwardCameraSearchPolicy(
     val minSpeedKmh: Double = 10.0,
-    val maxBearingDifferenceDegrees: Double = 35.0,
-    val maxLateralDistanceMeters: Double = 45.0,
-    val maxLateralDistanceWithoutDirectionHintMeters: Double = 30.0,
-    val maxDirectionHintDifferenceDegrees: Double = 70.0,
-    val duplicateCameraDistanceMeters: Double = 25.0
+    val maxBearingDifferenceDegrees: Double = 70.0,
+    val maxLateralDistanceMeters: Double = 70.0,
+    val maxLateralDistanceWithoutDirectionHintMeters: Double = 55.0,
+    val maxDirectionHintDifferenceDegrees: Double = 100.0,
+    val duplicateCameraDistanceMeters: Double = 40.0
 )
 
 fun List<NearbySpeedCamera>.filterForwardCorridor(
@@ -32,64 +32,79 @@ fun List<NearbySpeedCamera>.filterForwardCorridor(
     val bearing = sample.bearingDegrees ?: return emptyList()
     if (sample.speedKmh < policy.minSpeedKmh) return emptyList()
 
-    return filter { camera ->
-        val bearingDifference = angularDistanceDegrees(bearing, camera.bearingToCameraDegrees)
-        val bearingDifferenceRadians = Math.toRadians(bearingDifference)
-        val forwardDistanceMeters = camera.distanceMeters * cos(bearingDifferenceRadians)
-        val lateralDistanceMeters = camera.distanceMeters * sin(bearingDifferenceRadians)
-
-        val lateralDistanceLimit = if (camera.camera.explicitDirectionBearingDegrees() == null) {
-            policy.maxLateralDistanceWithoutDirectionHintMeters
-        } else {
-            policy.maxLateralDistanceMeters
-        }
-
-        forwardDistanceMeters > 0.0 &&
-            bearingDifference <= policy.maxBearingDifferenceDegrees &&
-            lateralDistanceMeters <= lateralDistanceLimit &&
-            camera.matchesDirectionHint(bearing, policy)
-    }.sortedWith(
-        compareBy<NearbySpeedCamera> { it.directionHintPenalty(bearing, policy) }
-            .thenBy { it.distanceMeters }
-    ).collapseDirectionalDuplicates(policy)
+    return mapNotNull { camera -> camera.toForwardCandidate(bearing, policy) }
+        .sortedWith(compareBy<ForwardCameraCandidate> { it.score }.thenBy { it.camera.distanceMeters })
+        .selectBestCandidatePerPhysicalPoint(policy)
+        .sortedBy { it.camera.distanceMeters }
+        .map { it.camera }
 }
 
-private fun NearbySpeedCamera.matchesDirectionHint(
+private data class ForwardCameraCandidate(
+    val camera: NearbySpeedCamera,
+    val score: Double
+)
+
+private fun NearbySpeedCamera.toForwardCandidate(
     driverBearingDegrees: Double,
     policy: ForwardCameraSearchPolicy
-): Boolean {
-    val cameraDirectionBearing = camera.explicitDirectionBearingDegrees() ?: return true
-    return angularDistanceDegrees(driverBearingDegrees, cameraDirectionBearing) <=
-        policy.maxDirectionHintDifferenceDegrees
+): ForwardCameraCandidate? {
+    val bearingDifference = angularDistanceDegrees(driverBearingDegrees, bearingToCameraDegrees)
+    if (bearingDifference > policy.maxBearingDifferenceDegrees) return null
+
+    val bearingDifferenceRadians = Math.toRadians(bearingDifference)
+    val forwardDistanceMeters = distanceMeters * cos(bearingDifferenceRadians)
+    if (forwardDistanceMeters <= 0.0) return null
+
+    val lateralDistanceMeters = distanceMeters * sin(bearingDifferenceRadians)
+    val directionHint = camera.explicitDirectionBearingDegrees()
+    val lateralDistanceLimit = if (directionHint == null) {
+        policy.maxLateralDistanceWithoutDirectionHintMeters
+    } else {
+        policy.maxLateralDistanceMeters
+    }
+    if (lateralDistanceMeters > lateralDistanceLimit) return null
+
+    val directionHintPenalty = directionHintPenalty(driverBearingDegrees, policy)
+        ?: return null
+
+    return ForwardCameraCandidate(
+        camera = this,
+        score = bearingDifference + lateralDistanceMeters * LATERAL_DISTANCE_SCORE_WEIGHT +
+            directionHintPenalty
+    )
 }
 
 private fun NearbySpeedCamera.directionHintPenalty(
     driverBearingDegrees: Double,
     policy: ForwardCameraSearchPolicy
-): Int {
-    val cameraDirectionBearing = camera.explicitDirectionBearingDegrees() ?: return 1
-    return if (
-        angularDistanceDegrees(driverBearingDegrees, cameraDirectionBearing) <=
-        policy.maxDirectionHintDifferenceDegrees
-    ) {
-        0
-    } else {
-        2
-    }
+): Double? {
+    val cameraDirectionBearing = camera.explicitDirectionBearingDegrees() ?: return UNKNOWN_DIRECTION_HINT_PENALTY
+    val directionDifference = angularDistanceDegrees(driverBearingDegrees, cameraDirectionBearing)
+    if (directionDifference > policy.maxDirectionHintDifferenceDegrees) return null
+
+    return directionDifference * DIRECTION_HINT_SCORE_WEIGHT
 }
 
-private fun List<NearbySpeedCamera>.collapseDirectionalDuplicates(
+private fun List<ForwardCameraCandidate>.selectBestCandidatePerPhysicalPoint(
     policy: ForwardCameraSearchPolicy
-): List<NearbySpeedCamera> =
-    fold(emptyList<NearbySpeedCamera>()) { selected, candidate ->
-        val hasNearbyDuplicate = selected.any { existing ->
-            existing.camera.roadName != null &&
-                existing.camera.roadName == candidate.camera.roadName &&
-                existing.camera.locationCoordinate.distanceToMeters(candidate.camera.locationCoordinate) <=
-                policy.duplicateCameraDistanceMeters
+): List<ForwardCameraCandidate> =
+    fold(emptyList()) { selected, candidate ->
+        if (selected.any { it.camera.isSamePhysicalPoint(candidate.camera, policy) }) {
+            selected
+        } else {
+            selected + candidate
         }
-        if (hasNearbyDuplicate) selected else selected + candidate
-    }.sortedBy { it.distanceMeters }
+    }
+
+private fun NearbySpeedCamera.isSamePhysicalPoint(
+    other: NearbySpeedCamera,
+    policy: ForwardCameraSearchPolicy
+): Boolean {
+    val cameraDistanceMeters = camera.locationCoordinate.distanceToMeters(other.camera.locationCoordinate)
+    val sameRoad = camera.roadName != null && camera.roadName == other.camera.roadName
+    return cameraDistanceMeters <= policy.duplicateCameraDistanceMeters &&
+        (sameRoad || cameraDistanceMeters <= policy.duplicateCameraDistanceMeters / 2.0)
+}
 
 private fun SpeedCamera.explicitDirectionBearingDegrees(): Double? {
     val directionTexts = listOfNotNull(roadDirection, location, roadName)
@@ -117,3 +132,7 @@ private fun String.toExplicitDirectionBearingDegrees(): Double? {
 
 private fun String.hasAny(vararg tokens: String): Boolean =
     tokens.any { contains(it) }
+
+private const val LATERAL_DISTANCE_SCORE_WEIGHT = 0.35
+private const val DIRECTION_HINT_SCORE_WEIGHT = 0.45
+private const val UNKNOWN_DIRECTION_HINT_PENALTY = 8.0

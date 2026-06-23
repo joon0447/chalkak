@@ -37,6 +37,7 @@ import com.joon.chalkak.domain.LocationSpeedSample
 import com.joon.chalkak.domain.NearbySpeedCamera
 import com.joon.chalkak.domain.SpeedJudgementResult
 import com.joon.chalkak.domain.driving.CameraPassDetector
+import com.joon.chalkak.domain.driving.DrivingBearingStabilizer
 import com.joon.chalkak.domain.filterForwardCorridor
 import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingScreen
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
         DriveRecordLocalDataSource(DriveRecordDatabaseHelper(this))
     }
     private val cameraPassDetector = CameraPassDetector()
+    private val drivingBearingStabilizer = DrivingBearingStabilizer()
     private var speedTrackingJob: Job? = null
     private var cameraRefreshJob: Job? = null
     private var currentSession: DriveSession? = null
@@ -400,6 +402,7 @@ class MainActivity : ComponentActivity() {
         )
         currentSession = session
         cameraPassDetector.reset()
+        drivingBearingStabilizer.reset()
         lifecycleScope.launch(Dispatchers.IO) {
             driveRecordDataSource.startSession(session)
             loadDriveRecordsOnMain()
@@ -413,14 +416,16 @@ class MainActivity : ComponentActivity() {
                     viewModel.stopSpeedTracking()
                 }
                 .collect { sample ->
+                    val stabilizedSample = drivingBearingStabilizer.stabilize(sample)
                     Log.d(
                         SPEED_TAG,
-                        "Speed sample: ${sample.roundedSpeedKmh}km/h, " +
-                            "accuracy=${sample.accuracyMeters}, " +
-                            "lat=${sample.location.latitude}, lng=${sample.location.longitude}"
+                        "Speed sample: ${stabilizedSample.roundedSpeedKmh}km/h, " +
+                            "accuracy=${stabilizedSample.accuracyMeters}, " +
+                            "bearing=${stabilizedSample.bearingDegrees}, " +
+                            "lat=${stabilizedSample.location.latitude}, lng=${stabilizedSample.location.longitude}"
                     )
-                    viewModel.updateSpeed(sample)
-                    handleSpeedSample(sample)
+                    viewModel.updateSpeed(stabilizedSample)
+                    handleSpeedSample(stabilizedSample)
                 }
         }
     }
@@ -437,6 +442,7 @@ class MainActivity : ComponentActivity() {
         }
         currentSession = null
         cameraPassDetector.reset()
+        drivingBearingStabilizer.reset()
         speedTrackingJob?.cancel()
         speedTrackingJob = null
         viewModel.stopSpeedTracking()
