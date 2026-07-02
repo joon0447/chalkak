@@ -22,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +42,7 @@ import com.joon.chalkak.presentation.common.TextMuted
 import com.joon.chalkak.presentation.common.TextPrimary
 import com.joon.chalkak.presentation.common.TextSecondary
 import com.joon.chalkak.presentation.common.WarningAmber
+import com.joon.chalkak.ui.theme.DarkSurface
 
 data class DrivingRegionOnboardingState(
     val selectedProvinces: List<String> = emptyList(),
@@ -65,25 +67,26 @@ fun DrivingRegionOnboardingScreen(
     onAllProvinceToggle: () -> Unit,
     onSubmit: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = AppBackground
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (applyStatusBarsPadding) Modifier.statusBarsPadding() else Modifier)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
+    Scaffold(
+        topBar = {
             if (topBarTitle != null) {
                 RegionTopBar(
                     title = topBarTitle,
                     onBackClick = onBackClick
                 )
-                Spacer(modifier = Modifier.height(24.dp))
             }
+        },
+        containerColor = DarkSurface
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (applyStatusBarsPadding) Modifier.statusBarsPadding() else Modifier)
+                .verticalScroll(rememberScrollState())
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 text = title,
                 color = TextPrimary,
