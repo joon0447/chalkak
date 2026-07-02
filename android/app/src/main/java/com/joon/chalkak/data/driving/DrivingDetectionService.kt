@@ -19,6 +19,7 @@ import com.joon.chalkak.data.camera.repository.SpeedCameraRepository
 import com.joon.chalkak.data.drive.local.DriveRecordDatabaseHelper
 import com.joon.chalkak.data.drive.local.DriveRecordLocalDataSource
 import com.joon.chalkak.data.location.AndroidLocationSpeedTracker
+import com.joon.chalkak.data.settings.AutoDrivingDetectionPreferences
 import com.joon.chalkak.domain.CameraPassRecord
 import com.joon.chalkak.domain.DriveSession
 import com.joon.chalkak.domain.DriveSessionSource
@@ -49,6 +50,7 @@ class DrivingDetectionService : Service() {
     private var locationJob: Job? = null
     private var currentSession: DriveSession? = null
 
+    private val autoDrivingDetectionPreferences by lazy { AutoDrivingDetectionPreferences(this) }
     private val locationSpeedTracker by lazy { AndroidLocationSpeedTracker(this) }
     private val cameraRepository by lazy {
         SpeedCameraRepository(
@@ -87,8 +89,9 @@ class DrivingDetectionService : Service() {
     }
 
     private fun startLowPowerMonitoring() {
-        if (state.status == DrivingDetectionStatus.MONITORING_LOW_POWER) return
+        if (state.isServiceActive && state.status != DrivingDetectionStatus.ERROR) return
 
+        autoDrivingDetectionPreferences.setEnabled(true)
         locationJob?.cancel()
         startDetector.reset()
         stopDetector.reset()
@@ -114,6 +117,7 @@ class DrivingDetectionService : Service() {
     }
 
     private fun stopDetection() {
+        autoDrivingDetectionPreferences.setEnabled(false)
         locationJob?.cancel()
         locationJob = null
         currentSession?.let { session ->

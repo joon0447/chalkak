@@ -27,6 +27,7 @@ import com.joon.chalkak.data.driving.DrivingDetectionService
 import com.joon.chalkak.data.drive.local.DriveRecordDatabaseHelper
 import com.joon.chalkak.data.drive.local.DriveRecordLocalDataSource
 import com.joon.chalkak.data.location.AndroidLocationSpeedTracker
+import com.joon.chalkak.data.settings.AutoDrivingDetectionPreferences
 import com.joon.chalkak.data.settings.DrivingRegion
 import com.joon.chalkak.data.settings.DrivingRegionPreferences
 import com.joon.chalkak.domain.CameraPassRecord
@@ -60,6 +61,7 @@ import java.util.UUID
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val drivingRegionPreferences by lazy { DrivingRegionPreferences(this) }
+    private val autoDrivingDetectionPreferences by lazy { AutoDrivingDetectionPreferences(this) }
     private val locationSpeedTracker by lazy { AndroidLocationSpeedTracker(this) }
     private val cameraRepository by lazy {
         SpeedCameraRepository(
@@ -95,13 +97,13 @@ class MainActivity : ComponentActivity() {
                     startDrivingDetectionService()
                 } else {
                     Log.w(SPEED_TAG, "Notification permission denied.")
-                    viewModel.updateAutoDrivingDetectionEnabled(false)
+                    updateAutoDrivingDetectionEnabled(false)
                 }
             }
         } else {
             Log.w(SPEED_TAG, "Location permission denied.")
             viewModel.stopSpeedTracking()
-            viewModel.updateAutoDrivingDetectionEnabled(false)
+            updateAutoDrivingDetectionEnabled(false)
         }
         startTrackingAfterPermissionRequest = false
         startAutoDetectionAfterPermissionRequest = false
@@ -119,6 +121,7 @@ class MainActivity : ComponentActivity() {
         loadDriveRecords()
         updateCameraCacheUi()
         updateLocationPermissionUi()
+        restoreAutoDrivingDetectionState()
         setContent {
             ChalkakTheme {
                 if (showOnboarding) {
@@ -159,6 +162,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         loadDriveRecords()
         updateCameraCacheUi()
+        restoreAutoDrivingDetectionState()
     }
 
     private fun toggleOnboardingProvince(province: String) {
@@ -532,7 +536,7 @@ class MainActivity : ComponentActivity() {
             action = DrivingDetectionService.ACTION_START
         }
         ContextCompat.startForegroundService(this, intent)
-        viewModel.updateAutoDrivingDetectionEnabled(true)
+        updateAutoDrivingDetectionEnabled(true)
     }
 
     private fun stopDrivingDetectionService() {
@@ -540,7 +544,21 @@ class MainActivity : ComponentActivity() {
             action = DrivingDetectionService.ACTION_STOP
         }
         startService(intent)
-        viewModel.updateAutoDrivingDetectionEnabled(false)
+        updateAutoDrivingDetectionEnabled(false)
+    }
+
+    private fun restoreAutoDrivingDetectionState() {
+        val enabled = autoDrivingDetectionPreferences.isEnabled()
+        if (enabled && hasLocationPermission() && hasNotificationPermission()) {
+            startDrivingDetectionService()
+        } else {
+            updateAutoDrivingDetectionEnabled(false)
+        }
+    }
+
+    private fun updateAutoDrivingDetectionEnabled(enabled: Boolean) {
+        autoDrivingDetectionPreferences.setEnabled(enabled)
+        viewModel.updateAutoDrivingDetectionEnabled(enabled)
     }
 
     private fun hasNotificationPermission(): Boolean =
