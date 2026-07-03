@@ -31,6 +31,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3575035257795904~3216062522" />
         <service
             android:name=".data.driving.DrivingDetectionService"
             android:exported="false"

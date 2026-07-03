@@ -3,6 +3,7 @@ package com.joon.chalkak.presentation.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,14 +22,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import com.joon.chalkak.R
 import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.model.RecentRecord
@@ -51,78 +60,123 @@ fun HomeScreen(
     onDrivingActionClick: () -> Unit,
     onAutoDrivingDetectionClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 32.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 32.dp)
+                .padding(bottom = 82.dp)
         ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "현재 속도",
+                    color = TextMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = uiState.currentSpeedKmh.toString(),
+                        color = TextPrimary,
+                        fontSize = 72.sp,
+                        lineHeight = 76.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "km/h",
+                        color = TextSecondary,
+                        fontSize = 20.sp,
+                        modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(58.dp))
+            uiState.nearbyCamera?.let { camera ->
+                CameraCard(camera = camera)
+            } ?: EmptyInfoCard(
+                title = "주변 단속 카메라 없음",
+                subtitle = "카메라 데이터 업데이트 후 주행을 시작하세요"
+            )
+            Spacer(modifier = Modifier.height(26.dp))
+            PrimaryActionButton(
+                isTracking = uiState.isSpeedTracking,
+                onClick = onDrivingActionClick
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            AutoDrivingDetectionToggle(
+                enabled = uiState.isAutoDrivingDetectionEnabled,
+                subtitle = uiState.autoDrivingDetectionSubtitle,
+                onClick = onAutoDrivingDetectionClick
+            )
+            Spacer(modifier = Modifier.height(28.dp))
+
             Text(
-                text = "현재 속도",
-                color = TextMuted,
-                style = MaterialTheme.typography.bodyMedium
+                text = "최근 기록",
+                color = TextSecondary,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
             )
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = uiState.currentSpeedKmh.toString(),
-                    color = TextPrimary,
-                    fontSize = 72.sp,
-                    lineHeight = 76.sp,
-                    fontWeight = FontWeight.ExtraBold
+
+            Spacer(modifier = Modifier.height(12.dp))
+            if (uiState.recentRecords.isEmpty()) {
+                EmptyInfoCard(
+                    title = "최근 기록 없음",
+                    subtitle = "주행 기록이 생성되면 여기에 표시됩니다"
                 )
-                Text(
-                    text = "km/h",
-                    color = TextSecondary,
-                    fontSize = 20.sp,
-                    modifier = Modifier.padding(start = 8.dp, bottom = 12.dp)
-                )
+            } else {
+                uiState.recentRecords.forEach { record ->
+                    RecentRecordCard(record = record)
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(58.dp))
-        uiState.nearbyCamera?.let { camera ->
-            CameraCard(camera = camera)
-        } ?: EmptyInfoCard(
-            title = "주변 단속 카메라 없음",
-            subtitle = "카메라 데이터 업데이트 후 주행을 시작하세요"
+        HomeAdBanner(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         )
-        Spacer(modifier = Modifier.height(26.dp))
-        PrimaryActionButton(
-            isTracking = uiState.isSpeedTracking,
-            onClick = onDrivingActionClick
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        AutoDrivingDetectionToggle(
-            enabled = uiState.isAutoDrivingDetectionEnabled,
-            subtitle = uiState.autoDrivingDetectionSubtitle,
-            onClick = onAutoDrivingDetectionClick
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Text(
-            text = "최근 기록",
-            color = TextSecondary,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        if (uiState.recentRecords.isEmpty()) {
-            EmptyInfoCard(
-                title = "최근 기록 없음",
-                subtitle = "주행 기록이 생성되면 여기에 표시됩니다"
-            )
-        } else {
-            uiState.recentRecords.forEach { record ->
-                RecentRecordCard(record = record)
-            }
-        }
     }
 }
+
+@Composable
+private fun HomeAdBanner(modifier: Modifier = Modifier) {
+    if (LocalInspectionMode.current) {
+        Spacer(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(BannerHeight)
+        )
+        return
+    }
+
+    val context = LocalContext.current
+    val adView = remember {
+        AdView(context).apply {
+            setAdSize(AdSize.BANNER)
+            adUnitId = HOME_BANNER_AD_UNIT_ID
+            loadAd(AdRequest.Builder().build())
+        }
+    }
+
+    DisposableEffect(adView) {
+        onDispose {
+            adView.destroy()
+        }
+    }
+
+    AndroidView(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(BannerHeight),
+        factory = { adView }
+    )
+}
+
+private val BannerHeight = 50.dp
+private const val HOME_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
 
 @Composable
 private fun AutoDrivingDetectionToggle(

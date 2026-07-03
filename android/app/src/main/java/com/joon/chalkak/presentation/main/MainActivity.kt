@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.ads.MobileAds
 import com.joon.chalkak.data.camera.local.SpeedCameraDatabaseHelper
 import com.joon.chalkak.data.camera.local.SpeedCameraLocalDataSource
 import com.joon.chalkak.data.camera.remote.PublicDataCameraApiClient
@@ -122,6 +123,9 @@ class MainActivity : ComponentActivity() {
         updateCameraCacheUi()
         updateLocationPermissionUi()
         restoreAutoDrivingDetectionState()
+        lifecycleScope.launch(Dispatchers.IO) {
+            MobileAds.initialize(this@MainActivity) {}
+        }
         setContent {
             ChalkakTheme {
                 if (showOnboarding) {
