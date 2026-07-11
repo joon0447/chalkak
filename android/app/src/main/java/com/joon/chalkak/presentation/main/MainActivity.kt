@@ -31,6 +31,7 @@ import com.joon.chalkak.data.location.AndroidLocationSpeedTracker
 import com.joon.chalkak.data.settings.AutoDrivingDetectionPreferences
 import com.joon.chalkak.data.settings.DrivingRegion
 import com.joon.chalkak.data.settings.DrivingRegionPreferences
+import com.joon.chalkak.data.settings.TermsAgreementPreferences
 import com.joon.chalkak.domain.CameraPassRecord
 import com.joon.chalkak.domain.DriveSession
 import com.joon.chalkak.domain.DrivingStatus
@@ -45,6 +46,7 @@ import com.joon.chalkak.model.NearbyCamera
 import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingScreen
 import com.joon.chalkak.presentation.onboarding.DrivingRegionOnboardingState
 import com.joon.chalkak.presentation.onboarding.DrivingProvinceNames
+import com.joon.chalkak.presentation.termsagreement.TermsAgreementScreen
 import com.joon.chalkak.ui.theme.ChalkakTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     private val drivingRegionPreferences by lazy { DrivingRegionPreferences(this) }
     private val autoDrivingDetectionPreferences by lazy { AutoDrivingDetectionPreferences(this) }
+    private val termsAgreementPreferences by lazy { TermsAgreementPreferences(this) }
     private val locationSpeedTracker by lazy { AndroidLocationSpeedTracker(this) }
     private val cameraRepository by lazy {
         SpeedCameraRepository(
@@ -81,6 +84,7 @@ class MainActivity : ComponentActivity() {
     private var startTrackingAfterPermissionRequest: Boolean = false
     private var startAutoDetectionAfterPermissionRequest: Boolean = false
     private var showOnboarding by mutableStateOf(false)
+    private var showTermsAgreement by mutableStateOf(false)
     private var onboardingState by mutableStateOf(DrivingRegionOnboardingState())
 
     private val locationPermissionLauncher = registerForActivityResult(
@@ -117,6 +121,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
         val primaryRegions = drivingRegionPreferences.getPrimaryRegions()
+        showTermsAgreement = !termsAgreementPreferences.hasAgreedToRequiredTerms()
         showOnboarding = primaryRegions.isEmpty()
         updatePrimaryRegionUi(primaryRegions)
         loadDriveRecords()
@@ -128,7 +133,9 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             ChalkakTheme {
-                if (showOnboarding) {
+                if (showTermsAgreement) {
+                    TermsAgreementScreen(onAgree = ::completeTermsAgreement)
+                } else if (showOnboarding) {
                     DrivingRegionOnboardingScreen(
                         state = onboardingState,
                         onProvinceToggle = ::toggleOnboardingProvince,
@@ -159,6 +166,19 @@ class MainActivity : ComponentActivity() {
         if (primaryRegions.isNotEmpty()) {
             refreshPrimaryRegionsIfNeeded(primaryRegions)
             prefetchCurrentRegionIfPossible()
+        }
+    }
+
+    private fun completeTermsAgreement() {
+        termsAgreementPreferences.saveRequiredTermsAgreement()
+        showTermsAgreement = false
+        if (!hasLocationPermission()) {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
