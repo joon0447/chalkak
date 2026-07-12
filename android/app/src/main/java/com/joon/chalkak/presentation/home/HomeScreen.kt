@@ -176,7 +176,7 @@ private fun HomeAdBanner(modifier: Modifier = Modifier) {
 }
 
 private val BannerHeight = 50.dp
-private const val HOME_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
+private const val HOME_BANNER_AD_UNIT_ID = "ca-app-pub-3575035257795904/9649608933"
 
 @Composable
 private fun AutoDrivingDetectionToggle(
