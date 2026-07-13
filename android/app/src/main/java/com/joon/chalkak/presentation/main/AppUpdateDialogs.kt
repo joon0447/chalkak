@@ -15,7 +15,7 @@ fun AppUpdateAvailableDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("새로운 버전이 있어요") },
-        text = { Text("더 나은 찰칵을 사용할 수 있도록 최신 버전으로 업데이트해 주세요.") },
+        text = { Text("더 나은 앱을 사용할 수 있도록 최신 버전으로 업데이트해 주세요.") },
         confirmButton = {
             TextButton(onClick = onUpdateClick) {
                 Text("업데이트")
