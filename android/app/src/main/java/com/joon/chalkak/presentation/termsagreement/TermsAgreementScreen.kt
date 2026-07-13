@@ -18,6 +18,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,10 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.joon.chalkak.presentation.common.AccentBlue
+import com.joon.chalkak.presentation.common.ChevronRightIcon
 import com.joon.chalkak.presentation.common.SurfaceDark
 import com.joon.chalkak.presentation.common.TextMuted
 import com.joon.chalkak.presentation.common.TextPrimary
@@ -45,7 +49,13 @@ import com.joon.chalkak.ui.theme.DarkSurface
 fun TermsAgreementScreen(onAgree: () -> Unit) {
     var isAgeAgreed by remember { mutableStateOf(false) }
     var isBackgroundLocationAgreed by remember { mutableStateOf(false) }
-    val canContinue = isAgeAgreed && isBackgroundLocationAgreed
+    var isPrivacyPolicyAgreed by remember { mutableStateOf(false) }
+    var isTermsOfServiceAgreed by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
+    val canContinue = isAgeAgreed &&
+        isBackgroundLocationAgreed &&
+        isPrivacyPolicyAgreed &&
+        isTermsOfServiceAgreed
 
     Scaffold(containerColor = DarkSurface) { innerPadding ->
         Column(
@@ -89,6 +99,24 @@ fun TermsAgreementScreen(onAgree: () -> Unit) {
                     checked = isBackgroundLocationAgreed,
                     onCheckedChange = { isBackgroundLocationAgreed = it }
                 )
+                AgreementRow(
+                    title = "[필수] 개인정보처리방침",
+                    description = "개인정보 수집 및 처리 방침에 동의합니다.",
+                    checked = isPrivacyPolicyAgreed,
+                    onCheckedChange = { isPrivacyPolicyAgreed = it },
+                    onDetailsClick = {
+                        uriHandler.openUri(PRIVACY_POLICY_URL)
+                    }
+                )
+                AgreementRow(
+                    title = "[필수] 서비스 이용방침",
+                    description = "서비스 이용방침에 동의합니다.",
+                    checked = isTermsOfServiceAgreed,
+                    onCheckedChange = { isTermsOfServiceAgreed = it },
+                    onDetailsClick = {
+                        uriHandler.openUri(TERMS_OF_SERVICE_URL)
+                    }
+                )
             }
             Spacer(Modifier.height(12.dp))
             Text(
@@ -120,7 +148,8 @@ private fun AgreementRow(
     title: String,
     description: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    onDetailsClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -134,13 +163,27 @@ private fun AgreementRow(
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(checkedColor = AccentBlue)
         )
-        Column(modifier = Modifier.padding(top = 3.dp, end = 8.dp)) {
+        Column(modifier = Modifier.weight(1f).padding(top = 3.dp, end = 8.dp)) {
             Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
             Text(description, color = TextMuted, style = MaterialTheme.typography.bodySmall)
         }
+        if (onDetailsClick != null) {
+            IconButton(onClick = onDetailsClick) {
+                Icon(
+                    imageVector = ChevronRightIcon,
+                    contentDescription = "$title 자세히 보기",
+                    tint = TextMuted
+                )
+            }
+        }
     }
 }
+
+private const val PRIVACY_POLICY_URL =
+    "https://docs.google.com/document/d/14Q8KoW93nTqD1R14hNpIqjXmgJ6tYB9xJtaKDzH5Q5k/edit?usp=sharing"
+private const val TERMS_OF_SERVICE_URL =
+    "https://docs.google.com/document/d/1A6nCb1jyo82T9G0S0x4NQNp1RCmYRca61XruSUkim3o/edit?usp=sharing"
 
 @Preview(showBackground = true, backgroundColor = 0xFF0B1016)
 @Composable

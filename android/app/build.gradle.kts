@@ -24,8 +24,8 @@ android {
         applicationId = "com.joon.chalkak"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1001
-        versionName = "1.0.1"
+        versionCode = 2026102
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(
@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.google.play.services.ads)
+    implementation(libs.google.play.app.update)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

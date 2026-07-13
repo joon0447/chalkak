@@ -20,6 +20,15 @@ import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.ads.MobileAds
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.InstallStateUpdatedListener
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.InstallStatus
+import com.google.android.play.core.install.model.UpdateAvailability
+import com.joon.chalkak.BuildConfig
 import com.joon.chalkak.data.camera.local.SpeedCameraDatabaseHelper
 import com.joon.chalkak.data.camera.local.SpeedCameraLocalDataSource
 import com.joon.chalkak.data.camera.remote.PublicDataCameraApiClient
@@ -66,6 +75,7 @@ class MainActivity : ComponentActivity() {
     private val drivingRegionPreferences by lazy { DrivingRegionPreferences(this) }
     private val autoDrivingDetectionPreferences by lazy { AutoDrivingDetectionPreferences(this) }
     private val termsAgreementPreferences by lazy { TermsAgreementPreferences(this) }
+    private val appUpdateManager: AppUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
     private val locationSpeedTracker by lazy { AndroidLocationSpeedTracker(this) }
     private val cameraRepository by lazy {
         SpeedCameraRepository(
@@ -86,6 +96,22 @@ class MainActivity : ComponentActivity() {
     private var showOnboarding by mutableStateOf(false)
     private var showTermsAgreement by mutableStateOf(false)
     private var onboardingState by mutableStateOf(DrivingRegionOnboardingState())
+    private var availableAppUpdate by mutableStateOf<AppUpdateInfo?>(null)
+    private var showUpdateDownloadedDialog by mutableStateOf(false)
+
+    private val installStateUpdatedListener = InstallStateUpdatedListener { state ->
+        if (state.installStatus() == InstallStatus.DOWNLOADED) {
+            showUpdateDownloadedDialog = true
+        }
+    }
+
+    private val appUpdateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode != RESULT_OK) {
+            Log.d(UPDATE_TAG, "In-app update was canceled or failed: ${result.resultCode}")
+        }
+    }
 
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -131,6 +157,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             MobileAds.initialize(this@MainActivity) {}
         }
+        appUpdateManager.registerListener(installStateUpdatedListener)
         setContent {
             ChalkakTheme {
                 if (showTermsAgreement) {
@@ -161,8 +188,24 @@ class MainActivity : ComponentActivity() {
                         onClearRecordsClick = ::clearDriveRecords
                     )
                 }
+                availableAppUpdate?.let {
+                    AppUpdateAvailableDialog(
+                        onUpdateClick = ::startFlexibleUpdate,
+                        onDismiss = { availableAppUpdate = null }
+                    )
+                }
+                if (showUpdateDownloadedDialog) {
+                    AppUpdateDownloadedDialog(
+                        onInstallClick = {
+                            showUpdateDownloadedDialog = false
+                            appUpdateManager.completeUpdate()
+                        },
+                        onDismiss = { showUpdateDownloadedDialog = false }
+                    )
+                }
             }
         }
+        checkForAvailableUpdate()
         if (primaryRegions.isNotEmpty()) {
             refreshPrimaryRegionsIfNeeded(primaryRegions)
             prefetchCurrentRegionIfPossible()
@@ -187,6 +230,52 @@ class MainActivity : ComponentActivity() {
         loadDriveRecords()
         updateCameraCacheUi()
         restoreAutoDrivingDetectionState()
+        checkForDownloadedUpdate()
+    }
+
+    override fun onDestroy() {
+        appUpdateManager.unregisterListener(installStateUpdatedListener)
+        super.onDestroy()
+    }
+
+    private fun checkForAvailableUpdate() {
+        appUpdateManager.appUpdateInfo
+            .addOnSuccessListener { updateInfo ->
+                val flexibleOptions = AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build()
+                if (
+                    updateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE &&
+                    updateInfo.availableVersionCode() > BuildConfig.VERSION_CODE &&
+                    updateInfo.isUpdateTypeAllowed(flexibleOptions)
+                ) {
+                    availableAppUpdate = updateInfo
+                }
+            }
+            .addOnFailureListener { throwable ->
+                Log.w(UPDATE_TAG, "Failed to check for app update.", throwable)
+            }
+    }
+
+    private fun checkForDownloadedUpdate() {
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { updateInfo ->
+            if (updateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                showUpdateDownloadedDialog = true
+            }
+        }
+    }
+
+    private fun startFlexibleUpdate() {
+        val updateInfo = availableAppUpdate ?: return
+        availableAppUpdate = null
+        val updateOptions = AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build()
+        runCatching {
+            appUpdateManager.startUpdateFlowForResult(
+                updateInfo,
+                appUpdateLauncher,
+                updateOptions
+            )
+        }.onFailure { throwable ->
+            Log.e(UPDATE_TAG, "Failed to start in-app update.", throwable)
+        }
     }
 
     private fun toggleOnboardingProvince(province: String) {
@@ -724,6 +813,7 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val TAG = "CameraApi"
         const val SPEED_TAG = "SpeedTracker"
+        const val UPDATE_TAG = "AppUpdate"
         const val CAMERA_SEARCH_RADIUS_METERS = 1_000.0
         const val MAX_NEARBY_CAMERA_CANDIDATES = 50
         const val MAX_FORWARD_CAMERA_RESULTS = 10
