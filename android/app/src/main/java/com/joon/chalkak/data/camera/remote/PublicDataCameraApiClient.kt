@@ -5,8 +5,10 @@ import com.joon.chalkak.BuildConfig
 import com.joon.chalkak.domain.SpeedCamera
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
+import kotlinx.coroutines.delay
 
 class PublicDataCameraApiClient(
     private val serviceKey: String = BuildConfig.PUBLIC_DATA_SERVICE_KEY,
@@ -37,7 +39,7 @@ class PublicDataCameraApiClient(
             "PUBLIC_DATA_SERVICE_KEY is missing. Add it to local.properties."
         }
 
-        val response = request(
+        val response = requestWithRetry(
             query = buildQuery(
                 pageNo = pageNo,
                 numOfRows = numOfRows,
@@ -72,6 +74,25 @@ class PublicDataCameraApiClient(
         return params.joinToString("&") { parameter ->
             "${parameter.key}=${parameter.encodedValue()}"
         }
+    }
+
+    private suspend fun requestWithRetry(query: String): String {
+        repeat(MAX_TIMEOUT_RETRIES + 1) { attempt ->
+            try {
+                return request(query)
+            } catch (exception: SocketTimeoutException) {
+                if (attempt == MAX_TIMEOUT_RETRIES) throw exception
+
+                val retryNumber = attempt + 1
+                Log.w(
+                    TAG,
+                    "Camera API timed out. Retrying $retryNumber/$MAX_TIMEOUT_RETRIES.",
+                    exception
+                )
+                delay(RETRY_DELAY_MILLIS * retryNumber)
+            }
+        }
+        error("Unreachable")
     }
 
     private fun request(query: String): String {
@@ -117,7 +138,9 @@ class PublicDataCameraApiClient(
         const val TAG = "CameraApi"
         const val BASE_URL = "https://api.data.go.kr/openapi/tn_pubr_public_unmanned_traffic_camera_api"
         const val CONNECT_TIMEOUT_MILLIS = 10_000
-        const val READ_TIMEOUT_MILLIS = 15_000
+        const val READ_TIMEOUT_MILLIS = 30_000
+        const val MAX_TIMEOUT_RETRIES = 3
+        const val RETRY_DELAY_MILLIS = 1_000L
     }
 }
 
